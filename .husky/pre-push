@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -e
+
+bun run fmt:c
+bun run lint:c
+bun run build
+bun run knip
+bun run knip:p
