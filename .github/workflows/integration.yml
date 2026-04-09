@@ -17,7 +17,7 @@ env:
   DATABASE_URL: postgresql://postgres:PasswordSAMPLE123@localhost:5444/integration
 
   # Redis
-  REDIS_PORT: 6380
+  REDIS_URL: redis://localhost:6380/0
 
   # Docker
   TAG: paramount
@@ -119,8 +119,7 @@ jobs:
           nohup bun index.js > bun.log 2>&1 &
       - uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
-          timeout_seconds: 5
-          timeout_minutes: 1
+          timeout_seconds: 10
           max_attempts: 5
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
 
@@ -149,13 +148,12 @@ jobs:
           docker run -d \
             --add-host=host.docker.internal:host-gateway \
             -e DATABASE_URL=postgresql://postgres:PasswordSAMPLE123@host.docker.internal:5444/integration \
-            -e REDIS_URL=redis://host.docker.internal:${{ env.REDIS_PORT }}/1 \
+            -e REDIS_URL=redis://host.docker.internal:6380/1 \
             -p 8080:8080 \
             --name app-$TAG $TAG
       - uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
-          timeout_seconds: 5
-          timeout_minutes: 1
+          timeout_seconds: 10
           max_attempts: 5
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
 
@@ -164,6 +162,7 @@ jobs:
     timeout-minutes: 5
 
     permissions:
+      actions: read
       contents: read
       security-events: write
 
@@ -172,5 +171,3 @@ jobs:
         with:
           persist-credentials: false
       - uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 #v0.5.2
-        with:
-          sarif-upload: true
