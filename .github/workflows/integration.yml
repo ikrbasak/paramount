@@ -54,7 +54,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: validation
     timeout-minutes: 5
 
     services:
@@ -92,7 +91,6 @@ jobs:
 
   health:
     runs-on: ubuntu-latest
-    needs: test
     timeout-minutes: 5
 
     services:
@@ -128,7 +126,6 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    needs: health-check
     timeout-minutes: 5
 
     services:
@@ -164,7 +161,6 @@ jobs:
 
   zizmor:
     runs-on: ubuntu-latest
-    needs: docker
     timeout-minutes: 5
 
     permissions:
