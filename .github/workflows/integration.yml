@@ -24,35 +24,46 @@ env:
 
 jobs:
   validation:
+    name: validate
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           fetch-depth: 0
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
-      - run: bun audit --audit-level=moderate
+      - name: audit
+        run: bun audit --audit-level=moderate
         continue-on-error: true
-      - run: bun install
-      - run: |
+      - name: install
+        run: bun install
+      - name: commitlint
+        run: |
           bunx commitlint \
             --from ${{ github.event.pull_request.base.sha }} \
             --to ${{ github.event.pull_request.head.sha }} --verbose
         if: github.event_name == 'pull_request'
-      - run: bun run fmt:c
-      - run: bun run lint:c
-      - run: |
+      - name: format
+        run: bun run fmt:c
+      - name: lint
+        run: bun run lint:c
+      - name: typecheck and build
+        run: |
           bunx tsc
           bunx tsc -p tsconfig.build.json
           bun run build
-      - run: |
+      - name: unused exports
+        run: |
           bun run knip
           bun run knip:p
 
   test:
+    name: test
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -70,28 +81,41 @@ jobs:
       redis:
         image: redis:8-alpine
         ports: [6380:6379]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
-      - run: bun install
-      - run: make migration:run
-      - run: make seeder:run
-      - run: make migration:check
-      - run: bun run test:cov
+      - name: install
+        run: bun install
+      - name: migrate
+        run: make migration:run
+      - name: seed
+        run: make seeder:run
+      - name: check migrations
+        run: make migration:check
+      - name: test with coverage
+        run: bun run test:cov
         env:
           NODE_ENV: test
-      - run: mkdir -p coverage && mv junit* coverage
+      - name: collect reports
+        run: mkdir -p coverage && mv junit* coverage
         if: always()
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+      - name: upload coverage
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         if: always()
         with:
           name: coverage
           path: coverage/
 
   health:
+    name: health check
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -103,57 +127,55 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: PasswordSAMPLE123
           POSTGRES_DB: integration
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 5
       redis:
         image: redis:8-alpine
         ports: [6380:6379]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
-      - run: bun install
-      - run: bun run build
-      - run: make migration:run
-      - run: make seeder:run
-      - run: |
+      - name: install
+        run: bun install
+      - name: build
+        run: bun run build
+      - name: migrate
+        run: make migration:run
+      - name: seed
+        run: make seeder:run
+      - name: start server
+        run: |
           cd build
           nohup bun index.js > bun.log 2>&1 &
-      - uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
+      - name: verify native health
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           timeout_seconds: 10
           max_attempts: 5
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
-
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    services:
-      postgres:
-        image: postgres:18-alpine
-        ports: [5444:5432]
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: PasswordSAMPLE123
-          POSTGRES_DB: integration
-      redis:
-        image: redis:8-alpine
-        ports: [6380:6379]
-
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - run: |
+      - name: stop server
+        run: kill $(lsof -ti:8080) || true
+      - name: build and run docker
+        run: |
           docker buildx build -t $TAG -f Dockerfile .
           docker image inspect $TAG
-      - run: |
           docker run -d \
             --add-host=host.docker.internal:host-gateway \
             -e DATABASE_URL=postgresql://postgres:PasswordSAMPLE123@host.docker.internal:5444/integration \
             -e REDIS_URL=redis://host.docker.internal:6380/1 \
             -p 8080:8080 \
             --name app-$TAG $TAG
-      - uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
+      - name: verify docker health
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           timeout_seconds: 10
           max_attempts: 5
