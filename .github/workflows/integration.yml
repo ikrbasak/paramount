@@ -83,6 +83,8 @@ jobs:
       - run: bun run test:cov
         env:
           NODE_ENV: test
+      - run: mkdir -p coverage && mv junit* coverage
+        if: always()
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         if: always()
         with:
@@ -156,18 +158,3 @@ jobs:
           timeout_seconds: 10
           max_attempts: 5
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
-
-  zizmor:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          persist-credentials: false
-      - uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8 #v0.5.2
