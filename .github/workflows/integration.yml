@@ -159,7 +159,7 @@ jobs:
       - name: verify native health
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
-          timeout_seconds: 10
+          timeout_seconds: 2
           max_attempts: 5
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
       - name: stop server
@@ -177,6 +177,6 @@ jobs:
       - name: verify docker health
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
-          timeout_seconds: 10
+          timeout_seconds: 2
           max_attempts: 5
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
