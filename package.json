@@ -21,7 +21,7 @@
   "dependencies": {
     "@mikro-orm/core": "^7.0.9",
     "@mikro-orm/postgresql": "^7.0.9",
-    "bullmq": "^5.73.2",
+    "bullmq": "^5.73.3",
     "dotenv-flow": "^4.1.0",
     "hono": "^4.12.12",
     "ioredis": "^5.10.1",
