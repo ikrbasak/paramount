@@ -67,6 +67,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    env:
+      LOG_LEVEL: silent
+
     services:
       postgres:
         image: postgres:18-alpine
