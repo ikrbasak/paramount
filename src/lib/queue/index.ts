@@ -62,7 +62,7 @@ export abstract class BaseWorker<TName extends keyof JobRegistry> extends Worker
           }
         });
 
-        // NOTE: BullMQ expects null as the return value when there is no meaningful result.
+        // NOTE BullMQ expects null as the return value when there is no meaningful result.
         return null;
       },
       {

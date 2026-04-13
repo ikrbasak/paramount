@@ -19,7 +19,7 @@ export default defineConfig({
       reporter: ['text', 'html', 'cobertura', 'json', 'json-summary'],
       reportOnFailure: true,
       reportsDirectory: 'coverage',
-      // NOTE: Keep track of thresholds, and update if necessary
+      // NOTE Keep track of thresholds, and update if necessary
       thresholds: {
         branches: 2,
         functions: 2,

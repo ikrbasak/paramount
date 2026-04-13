@@ -102,7 +102,7 @@ export const BaseUuidEntity = defineEntity({
   name: 'BaseEntity',
   repository: () => BaseRepository,
   properties: {
-    _id: p
+    _id: p // NOTE never expose this to public - should be used as foreign key
       .bigint()
       .type(StringBigIntType)
       .autoincrement()
@@ -110,13 +110,13 @@ export const BaseUuidEntity = defineEntity({
       .unique()
       .hidden()
       .serializer((v) => v.toString()),
-    id: p
+    id: p // NOTE safe to be exposed to public
       .uuid()
-      .default(raw('uuidv7()'))
+      .default(raw('uuidv7()')) // NOTE postgres supports uuid with and without hyphens
       .onCreate(() => UuidUtil.generate())
       .serializer((v) => UuidUtil.serialize(v)),
     createdAt: p
-      .datetime(3)
+      .datetime(3) // NOTE javascript only supports milliseconds (3) precision
       .onCreate(() => new Date())
       .default(raw('now()')),
     updatedAt: p
@@ -125,10 +125,15 @@ export const BaseUuidEntity = defineEntity({
       .onUpdate(() => new Date())
       .default(raw('now()')),
     deletedAt: p.datetime(3).nullable(),
-    v: p.bigint().version(),
+    v: p.bigint().version(), // NOTE keep track of the data version
   },
   filters: {
-    softDelete: { name: 'remove-soft-deleted-items', cond: { deletedAt: null }, default: true },
+    softDelete: {
+      // NOTE removes soft deleted records from the result set by default
+      name: 'remove-soft-deleted-items',
+      cond: { deletedAt: null },
+      default: true,
+    },
   },
 });
 
@@ -145,6 +150,7 @@ export class SoftDeleteSubscriber implements EventSubscriber {
         continue;
       }
 
+      // NOTE changes a delete to soft delete
       cs.entity.deletedAt = new Date();
       args.uow.computeChangeSet(cs.entity, ChangeSetType.UPDATE);
     }

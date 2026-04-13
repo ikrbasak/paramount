@@ -15,7 +15,7 @@ const baseLogger = pino({
   messageKey: 'key',
   redact: {
     remove: true,
-    // NOTE: keep this list up to date when adding new sensitive fields.
+    // NOTE keep this list up to date when adding new sensitive fields.
     paths: ['password', 'secret', 'token'],
   },
   serializers: { err: stdSerializers.errWithCause, error: stdSerializers.errWithCause },
