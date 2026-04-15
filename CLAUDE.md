@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working with this repo.
 
-> **Maintenance note for Claude**: keep this file up to date. After making architectural changes, adding non-obvious patterns, or any work that future instances would benefit from knowing, update this file accordingly.
+> **Maintenance note for Claude**: keep file up to date. After architectural changes, non-obvious patterns, or work future instances benefit from, update accordingly.
 
 ## Commands
 
@@ -33,64 +33,64 @@ make seeder:run            # run pending seeders
 
 ## Workflow rules
 
-- **After every file change**: run `bun run fmt`, `bun run lint`, `bun run knip`, `bun run knip:p`, and `bun run build` before considering work done.
-- **Imports**: always use absolute imports via the path aliases (`@/`, `~/`, `#/`) — no relative paths.
-- **Runtime**: this project exclusively uses Bun. Never use `npm`, `pnpm`, or `yarn` for any command.
-- **Dependencies**: prefer Bun built-ins (file I/O, `Bun.serve`, `Bun.password`, etc.) before reaching for a package. If a package is genuinely needed, explain the choice in 2–3 sentences and ask for confirmation before adding it.
-- **CI/CD**: the project uses GitHub Actions (`.github/workflows/`). Keep that in mind when touching build config, env vars, or scripts. Always pin `uses` actions to exact commit SHAs with version comments (e.g. `uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`).
-- **Transactions**: when a feature writes to both the database and cache (Redis), ensure atomicity — wrap DB operations in a MikroORM transaction and apply cache mutations only after the DB transaction commits successfully.
-- **Zod imports**: always use `import * as z from 'zod'` — never the default import (`import z from 'zod'`).
-- **Bundling**: uses Bun's native bundler — do not add or suggest alternative bundler config or dependencies.
-- **Datetime precision**: always use precision 3 for datetime columns in MikroORM entities (e.g. `p.datetime(3)`) — consistent with `BaseUuidEntity` in `src/database/helpers/index.ts`.
+- **After every file change**: run `bun run fmt`, `bun run lint`, `bun run knip`, `bun run knip:p`, and `bun run build` before work done.
+- **Imports**: use absolute imports via path aliases (`@/`, `~/`, `#/`) — no relative paths.
+- **Runtime**: Bun only. Never use `npm`, `pnpm`, or `yarn`.
+- **Dependencies**: prefer Bun built-ins (`Bun.serve`, `Bun.password`, etc.) before packages. If package needed, explain in 2–3 sentences and ask confirmation before adding.
+- **CI/CD**: uses GitHub Actions (`.github/workflows/`). Pin `uses` actions to exact commit SHAs with version comments (e.g. `uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`).
+- **Transactions**: when writing to both DB and cache (Redis), wrap DB ops in MikroORM transaction, apply cache mutations only after DB commit.
+- **Zod imports**: use `import * as z from 'zod'` — never default import (`import z from 'zod'`).
+- **Bundling**: Bun native bundler — no alternative bundler config or deps.
+- **Datetime precision**: use precision 3 for datetime columns in MikroORM entities (e.g. `p.datetime(3)`) — matches `BaseUuidEntity` in `src/database/helpers/index.ts`.
 
 ## Architecture
 
-**Paramount** is a Hono + Bun backend with PostgreSQL (MikroORM), Redis (ioredis), and BullMQ.
+**Paramount** — Hono + Bun backend with PostgreSQL (MikroORM), Redis (ioredis), BullMQ.
 
 ### Request lifecycle
 
 `src/index.ts` → `src/server.ts` (middleware stack, error handler) → `src/routes/` (handlers) → `src/services/` (business logic) → database/cache/queues
 
-Server middleware chain (in order): logger → CORS → timing debugger → body limit → timeout → routes → global error handler.
+Middleware chain (order): logger → CORS → timing debugger → body limit → timeout → routes → global error handler.
 
 ### Layered structure
 
-All features follow a **router → service → repository** pattern:
+All features follow **router → service → repository** pattern:
 
-- **Routes** (`src/routes/`) — validate input with Zod via `zValidator`, call a service, return a response. No business logic here.
+- **Routes** (`src/routes/`) — validate input with Zod via `zValidator`, call service, return response. No business logic.
 - **Services** (`src/services/`) — orchestrate business logic, call repositories.
-- **Repositories** — thin wrappers around MikroORM entity managers; all ORM operations must run inside a context provided by `withOrmContext`.
+- **Repositories** — thin wrappers around MikroORM entity managers; all ORM ops run inside context from `withOrmContext`.
 
 ### Key libraries in `src/lib/`
 
-- **`error/`** — Custom error hierarchy (`AppError`, `HttpError`, etc.) with typed status codes. All errors caught at the server level and formatted as JSON.
-- **`logger/`** — Pino logger wrapped with `AsyncLocalStorage` for per-request `logId` tracing across async boundaries. Wrap async work in `withLogContext` so the log context propagates correctly.
-- **`queue/`** — Abstract `BaseQueue` and `BaseWorker` classes (BullMQ) that auto-inject an ORM context and logger into every job. New job types must be added to `src/lib/queue/types.ts` (`JobRegistry`) — each entry maps a job name to its payload type. See [Queues](#queues) below for usage rules.
-- **`hono/`** — `zValidator` wrapper for Zod-based request validation (body, query, params).
+- **`error/`** — Custom error hierarchy (`AppError`, `HttpError`, etc.) with typed status codes. All errors caught at server level, formatted as JSON.
+- **`logger/`** — Pino logger with `AsyncLocalStorage` for per-request `logId` tracing. Wrap async work in `withLogContext` for log context propagation.
+- **`queue/`** — Abstract `BaseQueue` and `BaseWorker` classes (BullMQ), auto-inject ORM context + logger per job. New job types added to `src/lib/queue/types.ts` (`JobRegistry`) — maps job name to payload type. See [Queues](#queues) for rules.
+- **`hono/`** — `zValidator` wrapper for Zod request validation (body, query, params).
 
 ### Config & validation
 
-All env vars are validated via Zod schemas in `src/validators/schemas/`. Configs are split by domain: `src/configs/{database,queue,redis,env}.ts`. Use the domain-specific config object rather than reading `process.env` directly.
+Env vars validated via Zod schemas in `src/validators/schemas/`. Configs split by domain: `src/configs/{database,queue,redis,env}.ts`. Use domain config object, not `process.env` directly.
 
 ### Database
 
-Entities live in `src/database/entities/` and must be added to the `entities` array in `src/configs/database.ts`. MikroORM uses `UnderscoreNamingStrategy` (camelCase properties → snake_case columns). `SoftDeleteSubscriber` is globally registered. `ignoreUndefinedInQuery: true` means passing `undefined` in a query simply omits the condition. Migrations live in `src/database/migrations/`, seeders in `src/database/seeders/`. `mikro-orm.config.ts` at root is for the CLI. DB commands are in the `Makefile`.
+Entities in `src/database/entities/`, must be added to `entities` array in `src/configs/database.ts`. MikroORM uses `UnderscoreNamingStrategy` (camelCase → snake_case). `SoftDeleteSubscriber` globally registered. `ignoreUndefinedInQuery: true` — `undefined` in query omits condition. Migrations in `src/database/migrations/`, seeders in `src/database/seeders/`. `mikro-orm.config.ts` at root for CLI. DB commands in `Makefile`.
 
-`withOrmContext` is applied globally in `server.ts` for all HTTP requests — routes and services do not need to call it manually. It is required when running database code outside a request (e.g. scripts, queue jobs — `BaseWorker` handles this automatically).
+`withOrmContext` applied globally in `server.ts` for all HTTP requests — routes/services don't call it manually. Required outside requests (scripts, queue jobs — `BaseWorker` handles automatically).
 
 ### Queues
 
-BullMQ queues and workers are defined in `src/lib/queue/`. Key rules:
+BullMQ queues/workers in `src/lib/queue/`. Rules:
 
-- **Dispatch jobs via `queue.dispatch(data, opts?)`** — never call `queue.add(...)` directly. `dispatch` is a typed wrapper that ensures the correct job name and payload type from `JobRegistry`.
-- **Workers do not auto-start.** `defaultWorkerOptions` sets `autorun: false` (`src/configs/queue.ts`), so workers must be explicitly resumed at startup. This is handled in `src/index.ts` via `workers.map(w => w.resume())` — any new worker must be registered in `src/queues/` so it gets picked up there.
-- **New job types** must be added to `JobRegistry` in `src/lib/queue/types.ts` — each entry maps a job name to its payload type. **Job names must use PascalCase** (e.g. `EmailSend`).
+- **Dispatch via `queue.dispatch(data, opts?)`** — never call `queue.add(...)` directly. `dispatch` typed wrapper ensures correct job name + payload from `JobRegistry`.
+- **Workers don't auto-start.** `defaultWorkerOptions` sets `autorun: false` (`src/configs/queue.ts`), must be resumed at startup. Handled in `src/index.ts` via `workers.map(w => w.resume())` — new workers must be registered in `src/queues/`.
+- **New job types** added to `JobRegistry` in `src/lib/queue/types.ts`. **Job names use PascalCase** (e.g. `EmailSend`).
 
 ### Error handling
 
-Throw `CustomError` (or subclass it for domain-specific errors) for domain errors; throw `CustomZodError` for validation errors. Both accept a `cause` object for structured context. All errors are caught by the server and normalized through `ErrorFormat.format()` into `{ status, message, cause?, stack? }`.
+Throw `CustomError` (or subclass) for domain errors; `CustomZodError` for validation errors. Both accept `cause` object. All errors caught by server, normalized via `ErrorFormat.format()` into `{ status, message, cause?, stack? }`.
 
-Extend `CustomError` when a dedicated error type adds clarity:
+Extend `CustomError` when dedicated type adds clarity:
 
 ```ts
 export class ForbiddenError extends CustomError {
@@ -100,26 +100,26 @@ export class ForbiddenError extends CustomError {
 }
 ```
 
-Pre-built subclasses: `NotFoundError`. Add others (e.g. `UnprocessableEntityError`, `ForbiddenError`, `ConflictError`) as features require them.
+Pre-built: `NotFoundError`. Add others (`UnprocessableEntityError`, `ForbiddenError`, `ConflictError`) as needed.
 
 ### Constants
 
 Centralized in `src/constants/`:
 
-- **`APIRoute`** — route path strings (`satisfies Record<string, string>`). **`APIRouteVersion`** — version prefixes (e.g. `/api/v1`). Never hardcode path strings in handlers.
-- **`ErrorMessage.Generic.*`** — static strings. **`ErrorMessage.Field.*`** — parameterized factory functions (e.g. `ErrorMessage.Field.LabelNotFound('User')`). Never hardcode message strings inline.
+- **`APIRoute`** — route path strings (`satisfies Record<string, string>`). **`APIRouteVersion`** — version prefixes (e.g. `/api/v1`). Never hardcode paths in handlers.
+- **`ErrorMessage.Generic.*`** — static strings. **`ErrorMessage.Field.*`** — parameterized factories (e.g. `ErrorMessage.Field.LabelNotFound('User')`). Never hardcode messages inline.
 - **`HttpStatus`** — HTTP status code enum.
-- **`Duration`** — named time constants. Avoid magic numbers; use named constants wherever one exists.
+- **`Duration`** — named time constants. No magic numbers; use named constants.
 
 ### Logging
 
-Use structured Pino logging. The log **message** argument must be a short, dot-namespaced, grep-friendly key — not a human sentence (e.g. `'bull:job:started'`, `'user:login:failed'`). Put variable data in the preceding object:
+Structured Pino logging. Log **message** must be short, dot-namespaced, grep-friendly key — not sentence (e.g. `'bull:job:started'`, `'user:login:failed'`). Variable data in preceding object:
 
 ```ts
 logger.info({ userId, duration }, 'user:login:succeeded');
 ```
 
-Use `withLogContext` to wrap any async work where you want the request `correlationId` to propagate (route handlers, queue processors, etc.). The logger automatically redacts fields named `password`, `secret`, or `token` — if new sensitive fields are introduced, update the redact list in `src/lib/logger/index.ts`.
+Use `withLogContext` to wrap async work for request `correlationId` propagation (route handlers, queue processors). Logger auto-redacts `password`, `secret`, `token` — new sensitive fields need redact list update in `src/lib/logger/index.ts`.
 
 ### Path aliases
 
@@ -131,25 +131,25 @@ Use `withLogContext` to wrap any async work where you want the request `correlat
 
 ### Testing conventions
 
-- Unit tests: `tests/unit/`, integration tests: `tests/integration/`
-- Global setup (`tests/setup/test.global.setup.ts`) drops/recreates schema, runs migrations and seeders
+- Unit: `tests/unit/`, integration: `tests/integration/`
+- Global setup (`tests/setup/test.global.setup.ts`) drops/recreates schema, runs migrations + seeders
 - Per-test setup (`tests/setup/test.setup.ts`) flushes Redis before each test
-- `tests/utils/request.ts` provides a typed HTTP helper for integration tests
-- Vitest is configured with `bail: 1`, `shuffle: { files: true }`, and requires at least one assertion per test
-- Always explicitly import test globals (`describe`, `it`, `expect`, `beforeEach`, etc.) from `vitest` — do not rely on auto-injection
-- Each test file must have exactly one top-level `describe` block; nest additional `describe` blocks inside it as needed
-- For any new or updated feature, write or update the corresponding test cases. Tests must be extensive — cover happy paths, edge cases, error/failure paths, and boundary conditions to validate correct implementation and catch unforeseen regressions.
-- **Minimize mocking**: only mock what absolutely cannot run in the test environment (e.g. external third-party APIs). Real Postgres, Redis, and Typst are available in both local dev and CI — use them directly instead of mocking. Use `vi.spyOn` only when you need to simulate a failure path (e.g. DB/Redis errors). Always clean up test side-effects (e.g. delete inserted rows, drain queues, flush Redis keys).
+- `tests/utils/request.ts` — typed HTTP helper for integration tests
+- Vitest: `bail: 1`, `shuffle: { files: true }`, requires min one assertion per test
+- Explicitly import test globals (`describe`, `it`, `expect`, `beforeEach`, etc.) from `vitest` — no auto-injection
+- One top-level `describe` per file; nest additional inside
+- Write/update tests for new/changed features. Cover happy paths, edge cases, error paths, boundary conditions.
+- **Minimize mocking**: only mock what can't run in test env (external third-party APIs). Real Postgres, Redis available in dev + CI — use directly. `vi.spyOn` only for failure simulation. Clean up test side-effects.
 
-**Naming:** `describe` titles are noun phrases describing the domain (`'application health checks'`, `'identifier generation and formatting utilities'`). `it` titles follow `'should [outcome] [when/during condition]'`:
+**Naming:** `describe` titles = noun phrases (`'application health checks'`). `it` titles = `'should [outcome] [when/during condition]'`:
 
 - `'should return 200 when the application and its dependencies are healthy'`
 - `'should remove hyphens when converting an identifier to compact form'`
 
-**Structure within each `describe` block:**
+**Structure within `describe`:**
 
-1. Hooks first (`beforeAll`, `afterAll`, `beforeEach`, `afterEach`) — before any `it` blocks
-2. Each `it` body follows: **setup → action → assertion → cleanup**
+1. Hooks first (`beforeAll`, `afterAll`, `beforeEach`, `afterEach`) — before `it` blocks
+2. Each `it`: **setup → action → assertion → cleanup**
 
 ```ts
 it('should return 500 when the database is unavailable during the health check', async () => {
@@ -166,4 +166,4 @@ it('should return 500 when the database is unavailable during the health check',
 
 ## Commits
 
-Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`. Prefer lowercase commit subjects. Make frequent, focused commits rather than one large commit per feature or fix. No single commit should contain too many changes — split by logical unit (e.g. separate commits for deps, config, tests, pipeline).
+Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`. Lowercase subjects. Frequent, focused commits — split by logical unit (separate commits for deps, config, tests, pipeline).
