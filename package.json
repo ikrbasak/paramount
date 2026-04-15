@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --production --target=bun --outdir=build --metafile-md=bundle-stats.md --sourcemap=external --minify",
+    "build": "bun build src/index.ts --production --target=bun --outdir=build --sourcemap",
     "start": "bun build/index.js",
     "fmt": "oxfmt --no-error-on-unmatched-pattern",
     "fmt:c": "oxfmt --no-error-on-unmatched-pattern --check",
