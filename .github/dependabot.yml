@@ -3,6 +3,10 @@ version: 2
 updates:
   - package-ecosystem: bun
     directory: /
+    cooldown:
+      default-days: 3
+      exclude:
+        - 'typescript'
     schedule:
       interval: weekly
       day: monday
@@ -21,6 +25,8 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    cooldown:
+      default-days: 3
     schedule:
       interval: weekly
       day: monday

@@ -1,3 +1,7 @@
 logLevel = "error"
 telemetry = false
 env = false
+
+[install]
+minimumReleaseAge = 259200
+minimumReleaseAgeExcludes = ["typescript"]
