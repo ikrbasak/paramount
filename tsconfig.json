@@ -25,7 +25,6 @@
     "resolveJsonModule": true,
     "noErrorTruncation": true,
     "useUnknownInCatchVariables": true,
-    "tsBuildInfoFile": ".cache/.tsbuildinfo",
     "incremental": true,
     "noEmit": true,
     "noEmitOnError": true,
