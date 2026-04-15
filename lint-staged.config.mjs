@@ -2,8 +2,8 @@
 /** @type {import("lint-staged").Configuration} */
 const config = {
   '*.ts': (files) => [
-    `bun run lint -- ${files.join(' ')}`,
     `bun run fmt -- ${files.join(' ')}`,
+    `bun run lint -- ${files.join(' ')}`,
     'bunx tsc',
     'bunx tsc -p tsconfig.build.json',
     'bun run build',

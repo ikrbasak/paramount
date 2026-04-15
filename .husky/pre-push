@@ -3,6 +3,8 @@ set -e
 
 bun run fmt:c
 bun run lint:c
+bunx tsc
+bunx tsc -p tsconfig.build.json
 bun run build
 bun run knip
 bun run knip:p
