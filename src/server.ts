@@ -19,7 +19,12 @@ import { logger, withLogContext } from '@/lib/logger';
 import { routes } from '@/routes';
 import { UuidUtil } from '@/utils/uuid';
 
-export const server = new Hono()
+export const server = new Hono({
+  getPath: (req) => {
+    const url = new URL(req.url);
+    return url.pathname;
+  },
+})
   // ============================== the following middlewares are common for all routes
   .use(trimTrailingSlash())
   .use(requestId({ generator: () => UuidUtil.generate() }))
