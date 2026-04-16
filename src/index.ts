@@ -35,6 +35,8 @@ const shutdown = async (signal: string, error?: unknown) => {
     await app.stop(true);
     await Promise.all(Object.values(workers).map((w) => w.pause(true)));
     await Promise.all(Object.values(queues).map((q) => q.pause()));
+    await Promise.all(Object.values(workers).map((w) => w.close()));
+    await Promise.all(Object.values(queues).map((q) => q.close()));
     await orm.close();
     await cacheClient.quit().catch(() => cacheClient.disconnect());
 
