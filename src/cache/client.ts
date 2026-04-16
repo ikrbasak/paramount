@@ -3,4 +3,8 @@ import Redis from 'ioredis';
 import { env } from '@/configs/environment';
 import { redisConfig } from '@/configs/redis';
 
-export const cacheClient = new Redis(env.REDIS_URL, redisConfig);
+const CLIENT_MAX_RETRIES = 5;
+export const cacheClient = new Redis(env.REDIS_URL, {
+  ...redisConfig,
+  maxRetriesPerRequest: CLIENT_MAX_RETRIES,
+});
