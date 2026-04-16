@@ -21,7 +21,7 @@ jobs:
       - name: install dependencies
         run: |
           bun add -d @socketsecurity/bun-security-scanner
-          echo '\n[install.security]\nscanner = "@socketsecurity/bun-security-scanner"' >> bunfig.toml
+          echo -e '\n[install.security]\nscanner = "@socketsecurity/bun-security-scanner"' >> bunfig.toml
           bun install --frozen-lockfile
       - name: audit
         run: bun audit --audit-level=moderate
