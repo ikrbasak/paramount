@@ -1,6 +1,7 @@
 // oxlint-disable typescript/no-misused-promises, unicorn/no-process-exit
 import { serve } from 'bun';
 
+import { cacheClient } from '@/cache/client';
 import { env } from '@/configs/environment';
 import { orm } from '@/database/connection';
 import { logger } from '@/lib/logger';
@@ -35,6 +36,7 @@ const shutdown = async (signal: string, error?: unknown) => {
     await Promise.all(Object.values(workers).map((w) => w.pause(true)));
     await Promise.all(Object.values(queues).map((q) => q.pause()));
     await orm.close();
+    await cacheClient.quit().catch(() => cacheClient.disconnect());
 
     logger.error('server:termination:success');
   } catch (error) {
