@@ -36,7 +36,7 @@ export default defineConfig({
       junit: 'junit.xml',
     },
     passWithNoTests: false,
-    reporters: ['junit', 'json', 'default'],
+    reporters: ['junit', 'json', 'default', 'github-actions'],
     testTimeout: 10_000,
     watch: false,
     detectAsyncLeaks: true,
