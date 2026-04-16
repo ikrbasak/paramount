@@ -16,6 +16,7 @@ type ErrorResponseJson = {
   stack?: string;
 };
 
+/** @internal */
 export class CustomError extends Error {
   status: HttpStatus;
   cause: ErrorContext;
