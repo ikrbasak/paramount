@@ -45,7 +45,7 @@
     "lint-staged": "16.4.0",
     "oxfmt": "0.45.0",
     "oxlint": "1.60.0",
-    "oxlint-tsgolint": "0.21.0",
+    "oxlint-tsgolint": "0.21.1",
     "qs": "6.15.1",
     "sql-formatter": "15.7.3",
     "typescript": "6.0.2",
