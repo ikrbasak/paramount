@@ -71,6 +71,12 @@ export abstract class BaseWorker<TName extends keyof JobRegistry> extends Worker
         prefix: QUEUE_PREFIX,
       },
     );
+
+    this.on('failed', (job, error) =>
+      logger.error({ queue: name, jobId: job?.id, error }, 'bull:worker:failed'),
+    );
+    this.on('error', (error) => logger.error({ queue: name, error }, 'bull:worker:error'));
+    this.on('stalled', (jobId) => logger.warn({ queue: name, jobId }, 'bull:worker:stalled'));
   }
 
   abstract processor(job: Job<JobRegistry[TName], null, TName>): Promise<void>;
