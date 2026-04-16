@@ -49,7 +49,6 @@ const shutdown = async (signal: string, error?: unknown) => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 process.on('SIGHUP', shutdown);
-process.on('SIGTKILL', shutdown);
 
 // catch crashes
 process.on('uncaughtException', (error) => shutdown('uncaughtException', error));
