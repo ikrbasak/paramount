@@ -52,4 +52,21 @@ describe('application health checks', () => {
 
     spy.mockRestore();
   });
+
+  it('should return 500 when both the database and cache are unavailable during the health check', async () => {
+    const dbSpy = vi.spyOn(orm.em, 'execute').mockRejectedValue(new Error('DB unavailable'));
+    const cacheSpy = vi
+      .spyOn(cacheClient, 'ping')
+      .mockRejectedValue(new Error('Cache unavailable'));
+
+    const { success, status } = await request({
+      route: APIRoute.Health,
+    });
+
+    expect(success).toBeFalsy();
+    expect(status).toBe(HttpStatus.InternalServerError);
+
+    dbSpy.mockRestore();
+    cacheSpy.mockRestore();
+  });
 });
