@@ -1,10 +1,10 @@
 import type { ConnectionOptions, DefaultJobOptions, QueueOptions, WorkerOptions } from 'bullmq';
 
 import { env } from '@/configs/environment';
-import { redisConfig } from '@/configs/redis';
+import { bullmqRedisOptions } from '@/configs/redis';
 
 export const redisConnOpt: ConnectionOptions = {
-  ...redisConfig,
+  ...bullmqRedisOptions,
   url: env.REDIS_URL,
 };
 
