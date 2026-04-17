@@ -83,8 +83,26 @@ Entities in `src/database/entities/`, must be added to `entities` array in `src/
 BullMQ queues/workers in `src/lib/queue/`. Rules:
 
 - **Dispatch via `queue.dispatch(data, opts?)`** — never call `queue.add(...)` directly. `dispatch` typed wrapper ensures correct job name + payload from `JobRegistry`.
-- **Workers don't auto-start.** `defaultWorkerOptions` sets `autorun: false` (`src/configs/queue.ts`), must be resumed at startup. Handled in `src/index.ts` via `workers.map(w => w.resume())` — new workers must be registered in `src/queues/`.
+- **Workers don't auto-start.** `defaultWorkerOptions` sets `autorun: false` (`src/configs/queue.ts`), must be resumed at startup. Resumed in `initialize()` in `src/index.ts`; cleanup is registered as a disposer (see [Lifecycle](#lifecycle--shutdown)) — new workers must be registered in `src/queues/`.
 - **New job types** added to `JobRegistry` in `src/lib/queue/types.ts`. **Job names use PascalCase** (e.g. `EmailSend`).
+- `BaseWorker` already attaches `failed`/`error`/`stalled` listeners — don't re-wire them per worker.
+
+### Redis
+
+`src/configs/redis.ts` exports two named option objects — pick the right one when creating a new client; never spread-override a single shared config:
+
+- **`bullmqRedisOptions`** — for BullMQ queues/workers. **Must** keep `maxRetriesPerRequest: null` (ioredis disables blocking commands like `BRPOP` otherwise).
+- **`cacheRedisOptions`** — for short request/response commands (cache, rate limit, etc.). Caps `maxRetriesPerRequest` so a slow/unreachable Redis fails fast instead of hanging the request.
+
+The shared cache client (`src/cache/client.ts`) already logs `error`/`reconnecting`/`end` events — new clients should do the same.
+
+### Lifecycle / shutdown
+
+`src/index.ts` uses a **disposer stack**: each long-lived resource pushes a cleanup function as it comes up; shutdown drains them in reverse (LIFO).
+
+- Signal + crash handlers (`SIGINT`/`SIGTERM`/`SIGHUP`/`uncaughtException`/`unhandledRejection`) are registered **before** `initialize()`, so a failure during init still triggers ordered cleanup of whatever did start.
+- When adding a new long-lived resource (extra DB pool, external client, metrics exporter, etc.), push its cleanup into `disposers` next to where it's created — don't add ad-hoc branches inside `shutdown`.
+- Disposer errors are logged and tracked but do not abort the chain — every disposer runs once, then the process exits with the appropriate code.
 
 ### Error handling
 
