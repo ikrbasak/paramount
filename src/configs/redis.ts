@@ -13,10 +13,13 @@ export const bullmqRedisOptions: RedisOptions = {
   maxRetriesPerRequest: null,
 };
 
-// NOTE The cache client only runs short request/response commands. Cap retries so a slow
-// or unreachable Redis fails fast instead of hanging the request.
+// NOTE The cache client only runs short request/response commands. Cap retries and set
+// timeouts so a slow or unreachable Redis fails fast instead of hanging the request.
+// BullMQ options intentionally omit these — its workers need long-poll BRPOP.
 const CACHE_MAX_RETRIES_PER_REQUEST = 5;
 export const cacheRedisOptions: RedisOptions = {
   ...baseRedisOptions,
   maxRetriesPerRequest: CACHE_MAX_RETRIES_PER_REQUEST,
+  connectTimeout: 5000,
+  commandTimeout: 2000,
 };
