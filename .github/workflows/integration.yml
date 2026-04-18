@@ -54,8 +54,10 @@ jobs:
           const [type, slug] = head.split('/', 2);
 
           const rules = {
-            main: () => head === 'develop' || (type === 'hotfix' && ticket.test(slug)),
-            develop: () => head === 'main' || (['feat','bug','bugfix','chore'].includes(type) && ticket.test(slug)),
+            main: () => head === 'staging' || (type === 'hotfix' && ticket.test(slug)),
+            staging: () => head === 'testing' || (type === 'hotfix' && ticket.test(slug)),
+            testing: () => head === 'develop' || (type === 'bugfix' && ticket.test(slug)),
+            develop: () => head === 'testing' || (['feat','bugfix','chore'].includes(type) && ticket.test(slug)),
           };
 
           if (!rules[base]) { console.error('invalid base branch: ' + base); process.exit(1); }
