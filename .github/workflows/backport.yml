@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   backport:
@@ -27,6 +28,13 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: ensure backport label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create backport --color 0E8A16 --description "Backported from main" \
+            --repo "${{ github.repository }}" 2>/dev/null || true
+
       - name: create pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -35,10 +43,11 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          gh pr create \
+          BACKPORT_PR_URL=$(gh pr create \
             --base "$BACKPORT_BASE" \
             --head "$BACKPORT_HEAD" \
             --title "chore: backport ${SOURCE_BRANCH} to ${BACKPORT_BASE}" \
+            --label backport \
             --body "$(cat <<EOF
           Automated backport of #${PR_NUMBER} (\`${SOURCE_BRANCH}\`) to \`${BACKPORT_BASE}\`.
 
@@ -48,4 +57,5 @@ jobs:
 
           ${PR_BODY}
           EOF
-          )"
+          )")
+          echo "Created backport PR: $BACKPORT_PR_URL"
