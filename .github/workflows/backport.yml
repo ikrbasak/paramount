@@ -3,7 +3,7 @@ name: Backport
 on:
   pull_request:
     types: [closed]
-    branches: [main]
+    branches: [main, staging, testing]
 
 permissions:
   contents: write
@@ -13,43 +13,70 @@ permissions:
 jobs:
   backport:
     name: backport
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'hotfix/')
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
-    env:
-      BACKPORT_BASE: develop
-      BACKPORT_HEAD: main
 
     steps:
       - name: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
-          ref: main
           fetch-depth: 0
 
       - name: ensure backport label exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          gh label create backport --color 0E8A16 --description "Backported from main" \
-            --repo "${{ github.repository }}" 2>/dev/null || true
+          gh label create backport --color 0E8A16 --description "Backported changes" \
+            --repo "$REPO" 2>/dev/null || true
 
-      - name: create pr
+      - name: create backport prs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BACKPORT_PR_URL=$(gh pr create \
-            --base "$BACKPORT_BASE" \
-            --head "$BACKPORT_HEAD" \
-            --title "chore: backport ${SOURCE_BRANCH} to ${BACKPORT_BASE}" \
-            --label backport \
-            --body "$(cat <<EOF
-          Automated backport of #${PR_NUMBER} (\`${SOURCE_BRANCH}\`) to \`${BACKPORT_BASE}\`.
+          targets=""
+
+          # hotfix merged to main -> waterfall: main->staging->testing->develop
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" == hotfix/* ]]; then
+            targets="staging testing develop"
+          fi
+
+          # hotfix merged to staging -> waterfall: staging->testing->develop
+          if [[ "$BASE_REF" == "staging" && "$HEAD_REF" == hotfix/* ]]; then
+            targets="testing develop"
+          fi
+
+          # bugfix merged to testing -> backport: testing->develop
+          if [[ "$BASE_REF" == "testing" && "$HEAD_REF" == bugfix/* ]]; then
+            targets="develop"
+          fi
+
+          if [[ -z "$targets" ]]; then
+            echo "No backport needed"
+            exit 0
+          fi
+
+          # waterfall: each PR merges from the branch above
+          sources=("$BASE_REF")
+          for target in $targets; do
+            source="${sources[-1]}"
+            echo "Creating backport PR: ${source} -> ${target}"
+
+            pr_url=$(gh pr create \
+              --repo "$REPO" \
+              --base "$target" \
+              --head "$source" \
+              --label backport \
+              --title "chore: backport ${HEAD_REF} to ${target}" \
+              --body "$(cat <<EOF
+          Automated backport of #${PR_NUMBER} (\`${HEAD_REF}\`) to \`${target}\`.
 
           **Original PR:** ${PR_TITLE}
 
@@ -58,4 +85,6 @@ jobs:
           ${PR_BODY}
           EOF
           )")
-          echo "Created backport PR: $BACKPORT_PR_URL"
+            echo "Created: $pr_url"
+            sources+=("$target")
+          done
