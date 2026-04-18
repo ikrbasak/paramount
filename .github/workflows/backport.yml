@@ -1,0 +1,51 @@
+name: Backport
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: backport
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'hotfix/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      BACKPORT_BASE: develop
+      BACKPORT_HEAD: main
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: create pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          gh pr create \
+            --base "$BACKPORT_BASE" \
+            --head "$BACKPORT_HEAD" \
+            --title "chore: backport ${SOURCE_BRANCH} to ${BACKPORT_BASE}" \
+            --body "$(cat <<EOF
+          Automated backport of #${PR_NUMBER} (\`${SOURCE_BRANCH}\`) to \`${BACKPORT_BASE}\`.
+
+          **Original PR:** ${PR_TITLE}
+
+          ---
+
+          ${PR_BODY}
+          EOF
+          )"
