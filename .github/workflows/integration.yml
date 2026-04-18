@@ -37,6 +37,30 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
+      - name: branch name
+        if: github.event_name == 'pull_request'
+        run: |
+          HEAD_REF="${{ github.head_ref }}"
+          BASE_REF="${{ github.base_ref }}"
+          echo "The pull request proposes to merge $HEAD_REF to $BASE_REF"
+
+          bun -e "
+          const base = process.env.BASE_REF;
+          const head = process.env.HEAD_REF;
+          if (!base || !head) { console.error('BASE_REF and HEAD_REF are required'); process.exit(1); }
+
+          const ticket = /^[0-9]+(?:-[a-z0-9]+)+$/;
+          const [type, slug] = head.split('/', 2);
+
+          const rules = {
+            main: () => head === 'develop' || (type === 'hotfix' && ticket.test(slug)),
+            develop: () => head === 'main' || (['feat','bug','bugfix','chore'].includes(type) && ticket.test(slug)),
+          };
+
+          if (!rules[base]) { console.error('invalid base branch: ' + base); process.exit(1); }
+          if (!rules[base]()) { console.error('invalid: ' + head + ' -> ' + base); process.exit(1); }
+          console.log('valid: ' + head + ' -> ' + base);
+          "
       - name: install
         run: bun install
       - name: commitlint
