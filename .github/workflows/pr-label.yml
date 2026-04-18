@@ -1,0 +1,57 @@
+name: PR Label
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [main, staging, testing]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  label:
+    name: label pr
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create hotfix --color D93F0B --description "Hotfix targeting main or staging" --repo "$REPO" 2>/dev/null || true
+          gh label create promotion --color 1D76DB --description "Promotion between environments" --repo "$REPO" 2>/dev/null || true
+          gh label create staged --color 5319E7 --description "Promoted to staging" --repo "$REPO" 2>/dev/null || true
+          gh label create production --color 0E8A16 --description "Promoted to production" --repo "$REPO" 2>/dev/null || true
+
+      - name: apply labels and comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          labels=""
+
+          # hotfix to main or staging
+          if [[ "$HEAD_REF" == hotfix/* ]]; then
+            labels="hotfix"
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "This hotfix PR will be automatically backported through the waterfall after merge."
+          fi
+
+          # promotions
+          if [[ "$BASE_REF" == "testing" && "$HEAD_REF" == "develop" ]]; then
+            labels="promotion"
+          elif [[ "$BASE_REF" == "staging" && "$HEAD_REF" == "testing" ]]; then
+            labels="promotion,staged"
+          elif [[ "$BASE_REF" == "main" && "$HEAD_REF" == "staging" ]]; then
+            labels="promotion,production"
+          fi
+
+          if [[ -n "$labels" ]]; then
+            gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$labels"
+          fi
