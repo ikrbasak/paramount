@@ -7,13 +7,7 @@ type RawConfiguration = KnipConfig extends (options: unknown) => infer R
 
 const config: KnipConfig = () => {
   const config: RawConfiguration = {
-    project: [
-      'src/**/*.ts!',
-      'tests/**/*.ts',
-      'build/**/*.js!',
-      'mikro-orm.config.ts',
-      '!src/lib/rate-limit/*.ts',
-    ],
+    project: ['src/**/*.ts!', 'tests/**/*.ts', 'mikro-orm.config.ts'],
     ignoreFiles: ['src/database/_migrations/*.ts', 'src/database/_seeders/*.ts'],
     tags: ['-@internal'],
     ignoreDependencies: ['@mikro-orm/cli'],
