@@ -57,16 +57,16 @@ Middleware chain (order): logger → CORS → timing debugger → body limit →
 
 All features follow **router → service → repository** pattern:
 
-- **Routes** (`src/routes/`) — validate input with Zod via `zValidator`, call service, return response. No business logic.
+- **Routes** (`src/routes/`) — validate input with Zod via `requestValidate`, call service, return response. No business logic.
 - **Services** (`src/services/`) — orchestrate business logic, call repositories.
 - **Repositories** — thin wrappers around MikroORM entity managers; all ORM ops run inside context from `withOrmContext`.
 
 ### Key libraries in `src/lib/`
 
-- **`error/`** — Custom error hierarchy (`AppError`, `HttpError`, etc.) with typed status codes. All errors caught at server level, formatted as JSON.
-- **`logger/`** — Pino logger with `AsyncLocalStorage` for per-request `logId` tracing. Wrap async work in `withLogContext` for log context propagation.
+- **`error/`** — Custom error hierarchy (`CustomError`, `CustomZodError`) with typed status codes. All errors caught at server level, formatted as JSON.
+- **`logger/`** — Pino logger with `AsyncLocalStorage` for per-request `correlationId` tracing. Wrap async work in `withLogContext` for log context propagation.
 - **`queue/`** — Abstract `BaseQueue` and `BaseWorker` classes (BullMQ), auto-inject ORM context + logger per job. New job types added to `src/lib/queue/types.ts` (`JobRegistry`) — maps job name to payload type. See [Queues](#queues) for rules.
-- **`hono/`** — `zValidator` wrapper for Zod request validation (body, query, params).
+- **`hono/`** — `requestValidate` wrapper for Zod request validation (body, query, params).
 
 ### Config & validation
 
@@ -127,11 +127,11 @@ Centralized in `src/constants/`:
 - **`APIRoute`** — route path strings (`satisfies Record<string, string>`). **`APIRouteVersion`** — version prefixes (e.g. `/api/v1`). Never hardcode paths in handlers.
 - **`ErrorMessage.Generic.*`** — static strings. **`ErrorMessage.Field.*`** — parameterized factories (e.g. `ErrorMessage.Field.LabelNotFound('User')`). Never hardcode messages inline.
 - **`HttpStatus`** — HTTP status code enum.
-- **`Duration`** — named time constants. No magic numbers; use named constants.
+- When defining time values, use named constants — no magic numbers.
 
 ### Logging
 
-Structured Pino logging. Log **message** must be short, dot-namespaced, grep-friendly key — not sentence (e.g. `'bull:job:started'`, `'user:login:failed'`). Variable data in preceding object:
+Structured Pino logging (`messageKey: 'key'` — log messages appear under `key` in JSON output, not `msg`). Log **message** must be short, dot-namespaced, grep-friendly key — not sentence (e.g. `'bull:job:started'`, `'user:login:failed'`). Variable data in preceding object:
 
 ```ts
 logger.info({ userId, duration }, 'user:login:succeeded');
@@ -151,7 +151,7 @@ Use `withLogContext` to wrap async work for request `correlationId` propagation 
 
 - Unit: `tests/unit/`, integration: `tests/integration/`
 - Global setup (`tests/setup/test.global.setup.ts`) drops/recreates schema, runs migrations + seeders
-- Per-test setup (`tests/setup/test.setup.ts`) flushes Redis before each test
+- Per-file setup (`tests/setup/test.setup.ts`) flushes Redis once before all tests in each file (`beforeAll`)
 - `tests/utils/request.ts` — typed HTTP helper for integration tests
 - Vitest: `bail: 1`, `shuffle: { files: true }`, requires min one assertion per test
 - Explicitly import test globals (`describe`, `it`, `expect`, `beforeEach`, etc.) from `vitest` — no auto-injection
@@ -185,3 +185,18 @@ it('should return 500 when the database is unavailable during the health check',
 ## Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`. Lowercase subjects. Frequent, focused commits — split by logical unit (separate commits for deps, config, tests, pipeline).
+
+**Commit often, in dependency order.** Each commit must leave the codebase buildable so any commit can be checked out for point-in-time recovery. Commit dependencies before dependents:
+
+```
+Example — new login API:
+  1. feat(auth): add login validation schema      ← no deps, safe standalone
+  2. feat(auth): add user entity & repository     ← depends on schema
+  3. feat(auth): add login service                 ← depends on entity/repo
+  4. feat(auth): add login route                   ← depends on service
+  5. test(auth): add login tests                   ← depends on route
+
+Anti-pattern — committing service before schema:
+  checking out commit "add login service" → imports schema that
+  doesn't exist yet → build breaks → point-in-time recovery fails
+```
