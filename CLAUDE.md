@@ -40,6 +40,7 @@ make seeder:run            # run pending seeders
 - **CI/CD**: uses GitHub Actions (`.github/workflows/`). Pin `uses` actions to exact commit SHAs with version comments (e.g. `uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`). **Before modifying any workflow**, read `docs/workflows.md` for full context on branch strategy, triggers, labels, and setup requirements. **After modifying workflows**, update `docs/workflows.md` to reflect the changes.
 - **Transactions**: when writing to both DB and cache (Redis), wrap DB ops in MikroORM transaction, apply cache mutations only after DB commit.
 - **Zod imports**: use `import * as z from 'zod'` — never default import (`import z from 'zod'`).
+- **Environment variables**: never read `.env*` files directly. Refer to `src/validators/schemas/environment.ts` for available env vars and their types.
 - **Bundling**: Bun native bundler — no alternative bundler config or deps.
 - **Datetime precision**: use precision 3 for datetime columns in MikroORM entities (e.g. `p.datetime(3)`) — matches `BaseUuidEntity` in `src/database/helpers/index.ts`.
 
