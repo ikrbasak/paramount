@@ -83,16 +83,15 @@ Each backport PR is labeled `backport` and includes the original PR title and de
 
 ### Tag (`tag.yml`)
 
-**Triggers:** `pull_request` closed (merged) to `main`, `staging`, `testing`, or `develop`
+**Triggers:** `push` to `main`, `staging`, `testing`, or `develop`
 
-Creates two GPG-signed tags on every merge to a long-lived branch and pushes them. Tag messages follow conventional commits: `release(<branch>): <pr_title>`. Uses 8-char short SHA for reduced collision risk.
+Creates a GPG-signed tag on every push to a long-lived branch and pushes it. Uses 8-char short SHA for reduced collision risk.
 
-**Tag formats:**
+**Tag format:**
 
-| Format                             | Example                  | Purpose              |
-| ---------------------------------- | ------------------------ | -------------------- |
-| `<prefix>.<DDMMYYYY>.<short_sha>`  | `prod.18042026.a1b2c3de` | When was it deployed |
-| `<prefix>.<pr_number>.<short_sha>` | `prod.42.a1b2c3de`       | PR traceability      |
+| Format                 | Example         |
+| ---------------------- | --------------- |
+| `<prefix>.<short_sha>` | `prod.a1b2c3de` |
 
 **Branch prefixes:**
 
