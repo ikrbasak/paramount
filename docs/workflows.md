@@ -102,6 +102,25 @@ Creates a GPG-signed tag on every push to a long-lived branch and pushes it. Use
 | `staging` | `stage` |
 | `main`    | `prod`  |
 
+### Review (`review.yml`)
+
+**Triggers:** `issue_comment` created on a pull request containing `@robo-review`
+
+Runs Claude Code to review PR changes on demand. Comment `@robo-review` on any PR to trigger a review. Extra text after the trigger is forwarded as additional instructions (e.g. `@robo-review focus on error handling`).
+
+- Only activates on PR comments (ignores regular issue comments)
+- Checks out the PR head branch for full source access
+- Review-only — Claude cannot commit, push, or modify files (enforced via allowed tools whitelist)
+- Uses `track_progress` to show a live review status comment on the PR
+- Posts inline comments on specific code issues and a top-level summary comment
+
+**Usage:**
+
+```
+@robo-review
+@robo-review check the auth middleware for race conditions
+```
+
 ## Setup requirements
 
 ### Allow GitHub Actions to create PRs
@@ -137,14 +156,25 @@ Required by: `tag.yml`
    | `GIT_USER_NAME`   | Name used for tag authorship                  |
    | `GIT_USER_EMAIL`  | Email used for tag authorship                 |
 
+### Anthropic API key
+
+Required by: `review.yml`
+
+Add one repository secret in **Settings > Secrets and variables > Actions**:
+
+| Secret              | Value                        |
+| ------------------- | ---------------------------- |
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude |
+
 ### Third-party actions
 
 All actions are pinned to exact commit SHAs:
 
-| Action                          | Version | SHA                                        |
-| ------------------------------- | ------- | ------------------------------------------ |
-| `actions/checkout`              | v6.0.2  | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` |
-| `actions/upload-artifact`       | v7.0.1  | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` |
-| `oven-sh/setup-bun`             | v2.2.0  | `0c5077e51419868618aeaa5fe8019c62421857d6` |
-| `nick-fields/retry`             | v4.0.0  | `ad984534de44a9489a53aefd81eb77f87c70dc60` |
-| `crazy-max/ghaction-import-gpg` | v7.0.0  | `2dc316deee8e90f13e1a351ab510b4d5bc0c82cd` |
+| Action                          | Version  | SHA                                        |
+| ------------------------------- | -------- | ------------------------------------------ |
+| `actions/checkout`              | v6.0.2   | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` |
+| `actions/upload-artifact`       | v7.0.1   | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` |
+| `oven-sh/setup-bun`             | v2.2.0   | `0c5077e51419868618aeaa5fe8019c62421857d6` |
+| `nick-fields/retry`             | v4.0.0   | `ad984534de44a9489a53aefd81eb77f87c70dc60` |
+| `crazy-max/ghaction-import-gpg` | v7.0.0   | `2dc316deee8e90f13e1a351ab510b4d5bc0c82cd` |
+| `anthropics/claude-code-action` | v1.0.101 | `38ec876110f9fbf8b950c79f534430740c3ac009` |
