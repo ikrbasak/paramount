@@ -1,0 +1,60 @@
+name: Tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, staging, testing, develop]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: create signed tags
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: import gpg key
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd #v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
+      - name: create and push tags
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          declare -A prefixes=(
+            [main]=prod
+            [staging]=stage
+            [testing]=test
+            [develop]=dev
+          )
+
+          prefix="${prefixes[$BASE_REF]}"
+          short_sha="${MERGE_SHA:0:8}"
+          date_stamp=$(date -u +%d%m%Y)
+
+          tags=(
+            "${prefix}.${date_stamp}.${short_sha}"
+            "${prefix}.${PR_NUMBER}.${short_sha}"
+          )
+
+          for tag in "${tags[@]}"; do
+            git tag -s "$tag" -m "release(${BASE_REF}): ${PR_TITLE}" "$MERGE_SHA"
+          done
+
+          git push origin "${tags[@]}"
+          echo "Created tags: ${tags[*]}"
