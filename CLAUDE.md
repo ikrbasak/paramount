@@ -37,7 +37,7 @@ make seeder:run            # run pending seeders
 - **Imports**: use absolute imports via path aliases (`@/`, `~/`, `#/`) — no relative paths.
 - **Runtime**: Bun only. Never use `npm`, `pnpm`, or `yarn`.
 - **Dependencies**: prefer Bun built-ins (`Bun.serve`, `Bun.password`, etc.) before packages. If package needed, explain in 2–3 sentences and ask confirmation before adding.
-- **CI/CD**: uses GitHub Actions (`.github/workflows/`). Pin `uses` actions to exact commit SHAs with version comments (e.g. `uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`).
+- **CI/CD**: uses GitHub Actions (`.github/workflows/`). Pin `uses` actions to exact commit SHAs with version comments (e.g. `uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`). **Before modifying any workflow**, read `docs/workflows.md` for full context on branch strategy, triggers, labels, and setup requirements. **After modifying workflows**, update `docs/workflows.md` to reflect the changes.
 - **Transactions**: when writing to both DB and cache (Redis), wrap DB ops in MikroORM transaction, apply cache mutations only after DB commit.
 - **Zod imports**: use `import * as z from 'zod'` — never default import (`import z from 'zod'`).
 - **Bundling**: Bun native bundler — no alternative bundler config or deps.
