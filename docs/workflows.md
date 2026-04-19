@@ -135,6 +135,8 @@ Required by: `tag.yml`
    | ----------------- | --------------------------------------------- |
    | `GPG_PRIVATE_KEY` | Base64-encoded GPG private key from step 2    |
    | `GPG_PASSPHRASE`  | Passphrase for the key (empty string if none) |
+   | `GIT_USER_NAME`   | Name used for tag authorship                  |
+   | `GIT_USER_EMAIL`  | Email used for tag authorship                 |
 
 ### Third-party actions
 

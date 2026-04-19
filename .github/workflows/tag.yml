@@ -29,6 +29,11 @@ jobs:
           git_user_signingkey: true
           git_tag_gpgsign: true
 
+      - name: configure git identity
+        run: |
+          git config user.name "${{ secrets.GIT_USER_NAME }}"
+          git config user.email "${{ secrets.GIT_USER_EMAIL }}"
+
       - name: create and push tags
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
