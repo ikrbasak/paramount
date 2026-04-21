@@ -2,22 +2,7 @@
 
 ## Branch strategy
 
-Four long-lived branches with a promotion flow:
-
-```
-develop -> testing -> staging -> main
-```
-
-### Branch validation rules
-
-| Destination | Allowed sources                                       |
-| ----------- | ----------------------------------------------------- |
-| `main`      | `staging`, `hotfix/*`                                 |
-| `staging`   | `testing`, `hotfix/*`                                 |
-| `testing`   | `develop`, `bugfix/*`                                 |
-| `develop`   | `feat/*`, `bugfix/*`, `chore/*`, `testing` (backport) |
-
-Branch name pattern for ticket branches: `<type>/<ticket-number>-<slug>` (e.g. `feat/42-add-auth`, `hotfix/99-fix-crash`). The ticket portion must match `[0-9]+(-[a-z0-9]+)+`.
+Single long-lived branch: `main`. All PRs are raised directly to `main`.
 
 ## Workflows
 
@@ -27,7 +12,7 @@ Branch name pattern for ticket branches: `<type>/<ticket-number>-<slug>` (e.g. `
 
 Runs on every PR. Three parallel jobs:
 
-- **validate** — branch name validation (inline bun script), commitlint, format check, lint, typecheck, build, unused export check
+- **validate** — commitlint, format check, lint, typecheck, build, unused export check
 - **test** — runs migrations, seeders, and test suite with coverage against real Postgres and Redis services
 - **health** — builds and starts the server (native + Docker), verifies `/api/v1/health` endpoint responds
 
@@ -35,107 +20,9 @@ Runs on every PR. Three parallel jobs:
 
 **Triggers:** daily cron (`0 0 * * *`), `workflow_dispatch`
 
-Runs dependency security audit via Socket Security scanner. Uses a matrix strategy to audit both `main` and `develop` branches in parallel.
-
-### PR Label (`pr-label.yml`)
-
-**Triggers:** `pull_request` opened to `main`, `staging`, or `testing`
-
-Automatically labels PRs and adds comments:
-
-| PR type                           | Labels applied            | Comment         |
-| --------------------------------- | ------------------------- | --------------- |
-| `hotfix/*` to `main` or `staging` | `hotfix`                  | Backport notice |
-| `develop` to `testing`            | `promotion`               | —               |
-| `testing` to `staging`            | `promotion`, `staged`     | —               |
-| `staging` to `main`               | `promotion`, `production` | —               |
-
-Creates labels automatically if they don't exist.
-
-**Labels managed:**
-
-| Label        | Color              | Description                      |
-| ------------ | ------------------ | -------------------------------- |
-| `hotfix`     | `#D93F0B` (red)    | Hotfix targeting main or staging |
-| `promotion`  | `#1D76DB` (blue)   | Promotion between environments   |
-| `staged`     | `#5319E7` (purple) | Promoted to staging              |
-| `production` | `#0E8A16` (green)  | Promoted to production           |
-
-### Backport (`backport.yml`)
-
-**Triggers:** `pull_request` closed (merged) to `main`, `staging`, or `testing`
-
-Creates cascading backport PRs through the waterfall:
-
-| Merged into | Source type | Backport chain                     |
-| ----------- | ----------- | ---------------------------------- |
-| `main`      | `hotfix/*`  | main → staging → testing → develop |
-| `staging`   | `hotfix/*`  | staging → testing → develop        |
-| `testing`   | `bugfix/*`  | testing → develop                  |
-
-Each backport PR is labeled `backport` and includes the original PR title and description.
-
-**Label managed:**
-
-| Label      | Color             | Description        |
-| ---------- | ----------------- | ------------------ |
-| `backport` | `#0E8A16` (green) | Backported changes |
-
-### Tag (`tag.yml`)
-
-**Triggers:** `push` to `main`, `staging`, `testing`, or `develop`
-
-Creates a GPG-signed tag on every push to a long-lived branch and pushes it. Uses 8-char short SHA for reduced collision risk.
-
-**Tag format:**
-
-| Format                 | Example         |
-| ---------------------- | --------------- |
-| `<prefix>.<short_sha>` | `prod.a1b2c3de` |
-
-**Branch prefixes:**
-
-| Branch    | Prefix  |
-| --------- | ------- |
-| `develop` | `dev`   |
-| `testing` | `test`  |
-| `staging` | `stage` |
-| `main`    | `prod`  |
+Runs dependency security audit via Socket Security scanner on the `main` branch.
 
 ## Setup requirements
-
-### Allow GitHub Actions to create PRs
-
-Required by: `backport.yml`, `pr-label.yml`
-
-Go to **Settings > Actions > General > Workflow permissions** and enable:
-
-- **"Allow GitHub Actions to create and approve pull requests"**
-
-### GPG signing for tags
-
-Required by: `tag.yml`
-
-1. Generate a GPG key (or use an existing one):
-
-   ```sh
-   gpg --full-generate-key
-   ```
-
-2. Export the private key:
-
-   ```sh
-   gpg --armor --export-secret-keys YOUR_KEY_ID | base64
-   ```
-
-3. Add two repository secrets in **Settings > Secrets and variables > Actions**:
-
-   | Secret            | Value                                         |
-   | ----------------- | --------------------------------------------- |
-   | `GPG_PRIVATE_KEY` | Base64-encoded GPG private key from step 2    |
-   | `GPG_PASSPHRASE`  | Passphrase for the key (empty string if none) |
-   | `GIT_USER_NAME`   | Name used for tag authorship                  |
-   | `GIT_USER_EMAIL`  | Email used for tag authorship                 |
 
 ### Third-party actions
 
