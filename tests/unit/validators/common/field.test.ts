@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 
 import { stringBooleanField, stringEnumField } from '@/validators/common/field';
 
@@ -43,11 +44,11 @@ describe('custom zod field validators', () => {
     });
 
     it('should reject a value that is not in the allowed list', () => {
-      expect(() => schema.parse('yellow')).toThrow();
+      expect(() => schema.parse('yellow')).toThrow(ZodError);
     });
 
     it('should reject an empty string', () => {
-      expect(() => schema.parse('')).toThrow();
+      expect(() => schema.parse('')).toThrow(ZodError);
     });
   });
 });
