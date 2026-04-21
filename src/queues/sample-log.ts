@@ -10,7 +10,7 @@ export class SampleLogQueue extends BaseQueue<'SampleLog'> {}
 
 export class SampleLogQueueWorker extends BaseWorker<'SampleLog'> {
   async processor(job: Job<JobRegistry['SampleLog'], null, 'SampleLog'>) {
-    await delay(1000);
+    await delay(1);
     logger.info({ jobId: job.id, content: job.data.content }, 'sample:log:completed');
   }
 }
