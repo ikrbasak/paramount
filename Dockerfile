@@ -3,7 +3,7 @@ WORKDIR /app
 
 FROM base AS builder
 
-COPY package.json bun.lock bunfig.toml /app
+COPY package.json bun.lock bunfig.toml /app/
 RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
