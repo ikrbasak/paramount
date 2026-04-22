@@ -35,18 +35,10 @@ jobs:
       contents: read
 
     steps:
-      - name: compute fetch depth
-        id: depth
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "value=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=1" >> "$GITHUB_OUTPUT"
-          fi
-      - name: checkout
+      - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
-          fetch-depth: ${{ steps.depth.outputs.value }}
+          fetch-depth: 0
           persist-credentials: false
       - name: setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
