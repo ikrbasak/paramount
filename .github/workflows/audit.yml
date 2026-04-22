@@ -1,14 +1,16 @@
 name: Audit
 
 on:
+  pull_request:
+    branches: [main]
   schedule:
-    # Runs every day at 00:00 UTC
-    - cron: '0 0 * * *'
+    # Runs every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 jobs:
   audit:
-    name: run audit
+    name: dependency audit
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -24,3 +26,62 @@ jobs:
           bun install --frozen-lockfile
       - name: audit
         run: bun audit --audit-level=moderate
+
+  bearer:
+    name: bearer sast
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: bearer
+        uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
+        with:
+          quiet: true
+          diff: ${{ github.event_name == 'pull_request' }}
+          format: sarif
+          output: bearer.sarif
+      - name: upload bearer report
+        if: always()
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        with:
+          sarif_file: bearer.sarif
+          category: bearer
+
+  gitleaks:
+    name: gitleaks secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@bf2dc8e55639c1e091e9b45970152e4313705814 #v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  semgrep:
+    name: semgrep sast
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: scan
+        run: semgrep scan --config auto --sarif -o semgrep.sarif
+      - name: upload semgrep report
+        if: always()
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
