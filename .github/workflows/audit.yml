@@ -95,8 +95,9 @@ jobs:
           persist-credentials: false
       - name: find secrets
         run: |
-          docker run --rm ghcr.io/gitleaks/gitleaks:latest \
-            -v "$(pwd)":/repository git -v -s=/repository
+          docker run --rm -v "$(pwd)":/repository \
+            ghcr.io/gitleaks/gitleaks:latest \
+            git -v -s=/repository
 
   zizmor:
     name: zizmor workflow audit
