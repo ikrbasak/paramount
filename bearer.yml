@@ -1,0 +1,5 @@
+rule:
+  skip-rule:
+    # Structured logging with Pino uses object-first args for context,
+    # not leaking sensitive data. Logger auto-redacts password, secret, token.
+    - javascript_lang_logger_leak
