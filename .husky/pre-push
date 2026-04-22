@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
+gitleaks git --platform=github --verbose
 bun run fmt:c
 bun run lint:c
 bunx tsc
