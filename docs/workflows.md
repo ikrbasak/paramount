@@ -8,9 +8,9 @@ Single long-lived branch: `main`. All PRs are raised directly to `main`.
 
 ### Integration (`integration.yml`)
 
-**Triggers:** `pull_request`, `workflow_dispatch`
+**Triggers:** `pull_request` (to `main`), `workflow_dispatch`
 
-Runs on every PR. Three parallel jobs:
+Runs on every PR to main. Three parallel jobs:
 
 - **validate** — commitlint, format check, lint, typecheck, build, unused export check
 - **test** — runs migrations, seeders, and test suite with coverage against real Postgres and Redis services
@@ -18,9 +18,20 @@ Runs on every PR. Three parallel jobs:
 
 ### Audit (`audit.yml`)
 
-**Triggers:** daily cron (`0 0 * * *`), `workflow_dispatch`
+**Triggers:** `pull_request` (to `main`), weekly cron (Sunday `0 0 * * 0`), `workflow_dispatch`
 
-Runs dependency security audit via Socket Security scanner on the `main` branch.
+Four parallel jobs for security scanning:
+
+- **dependency audit** — Socket Security scanner via `bun audit`
+- **bearer sast** — Bearer static analysis with SARIF upload to GitHub Security tab (diff-only on PRs)
+- **gitleaks secret scan** — scans git history for leaked secrets
+- **semgrep sast** — Semgrep CE open-source static analysis with SARIF upload
+
+### CodeQL (`codeql.yml`)
+
+**Triggers:** `pull_request` (to `main`), `workflow_dispatch`
+
+GitHub's CodeQL analysis for JavaScript/TypeScript. Results appear in the repository Security tab.
 
 ## Setup requirements
 
