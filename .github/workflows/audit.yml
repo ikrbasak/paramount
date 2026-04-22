@@ -59,15 +59,21 @@ jobs:
           output: bearer.sarif
         continue-on-error: true
       - name: reviewdog
-        if: github.event_name == 'pull_request'
-        run: reviewdog -f=sarif -reporter=github-pr-review -fail-level=any < bearer.sarif
+        if: github.event_name == 'pull_request' && steps.bearer.outcome == 'failure'
+        run: reviewdog -f=sarif -reporter=github-pr-review < bearer.sarif
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: fail on findings
+        continue-on-error: true
+      - name: summary
         if: steps.bearer.outcome == 'failure'
         run: |
-          echo "::error::Bearer found security findings:"
-          jq -r '.runs[].results[] | "  \(.level): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) - \(.message.text)"' bearer.sarif
+          {
+            echo "## Bearer SAST Findings"
+            echo ""
+            echo "| Severity | File | Line | Description |"
+            echo "|----------|------|------|-------------|"
+            jq -r '.runs[].results[] | "| \(.level) | `\(.locations[0].physicalLocation.artifactLocation.uri)` | \(.locations[0].physicalLocation.region.startLine) | \(.message.text) |"' bearer.sarif
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
   gitleaks:
@@ -124,13 +130,19 @@ jobs:
         run: uvx semgrep scan --config auto --sarif -o semgrep.sarif
         continue-on-error: true
       - name: reviewdog
-        if: github.event_name == 'pull_request'
-        run: reviewdog -f=sarif -reporter=github-pr-review -fail-level=any < semgrep.sarif
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'failure'
+        run: reviewdog -f=sarif -reporter=github-pr-review < semgrep.sarif
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: fail on findings
+        continue-on-error: true
+      - name: summary
         if: steps.scan.outcome == 'failure'
         run: |
-          echo "::error::Semgrep found security findings:"
-          jq -r '.runs[].results[] | "  \(.level): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) - \(.message.text)"' semgrep.sarif
+          {
+            echo "## Semgrep SAST Findings"
+            echo ""
+            echo "| Severity | File | Line | Description |"
+            echo "|----------|------|------|-------------|"
+            jq -r '.runs[].results[] | "| \(.level) | `\(.locations[0].physicalLocation.artifactLocation.uri)` | \(.locations[0].physicalLocation.region.startLine) | \(.message.text) |"' semgrep.sarif
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 1
