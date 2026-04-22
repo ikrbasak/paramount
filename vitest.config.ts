@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
+    isolate: false,
     alias: {
       '~': join(process.cwd(), 'tests/'),
       '@': join(process.cwd(), 'src/'),
