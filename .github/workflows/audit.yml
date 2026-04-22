@@ -97,7 +97,7 @@ jobs:
         run: |
           docker run --rm -v "$(pwd)":/repository \
             ghcr.io/gitleaks/gitleaks:latest \
-            git -v -s=/repository
+            detect -v -s=/repository
 
   zizmor:
     name: zizmor workflow audit
