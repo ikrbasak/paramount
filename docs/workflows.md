@@ -23,15 +23,9 @@ Runs on every PR to main. Three parallel jobs:
 Four parallel jobs for security scanning:
 
 - **dependency audit** — Socket Security scanner via `bun audit`
-- **bearer sast** — Bearer static analysis with SARIF upload to GitHub Security tab (diff-only on PRs)
+- **bearer sast** — Bearer static analysis (diff-only on PRs)
 - **gitleaks secret scan** — scans git history for leaked secrets
-- **semgrep sast** — Semgrep CE open-source static analysis with SARIF upload
-
-### CodeQL (`codeql.yml`)
-
-**Triggers:** `pull_request` (to `main`), `workflow_dispatch`
-
-GitHub's CodeQL analysis for JavaScript/TypeScript. Results appear in the repository Security tab.
+- **semgrep sast** — Semgrep CE open-source static analysis
 
 ## Setup requirements
 
