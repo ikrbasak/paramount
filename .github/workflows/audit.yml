@@ -61,7 +61,10 @@ jobs:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: fail on findings
         if: steps.bearer.outcome == 'failure'
-        run: exit 1
+        run: |
+          echo "::error::Bearer found security findings:"
+          jq -r '.runs[].results[] | "  \(.level): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) - \(.message.text)"' bearer.sarif
+          exit 1
 
   gitleaks:
     name: gitleaks secret scan
@@ -123,4 +126,7 @@ jobs:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: fail on findings
         if: steps.scan.outcome == 'failure'
-        run: exit 1
+        run: |
+          echo "::error::Semgrep found security findings:"
+          jq -r '.runs[].results[] | "  \(.level): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) - \(.message.text)"' semgrep.sarif
+          exit 1
