@@ -12,9 +12,9 @@ Single long-lived branch: `main`. All PRs are raised directly to `main`.
 
 Runs on every PR to main. Three parallel jobs:
 
-- **validate** — commitlint, format check, lint, typecheck, build, unused export check
+- **validate** — commitlint, format check, lint, typecheck, build, unused export check, Dockerfile lint (hadolint)
 - **test** — runs migrations, seeders, and test suite with coverage against real Postgres and Redis services
-- **health** — builds and starts the server (native + Docker), verifies `/api/v1/health` endpoint responds
+- **health** — builds and starts the server (native + Docker), verifies `/api/v1/health` endpoint responds, scans Docker image for vulnerabilities (Trivy)
 
 ### Audit (`audit.yml`)
 
@@ -23,10 +23,10 @@ Runs on every PR to main. Three parallel jobs:
 Five parallel jobs for security scanning:
 
 - **dependency audit** — Socket Security scanner via `bun audit`
-- **bearer sast** — Bearer static analysis (diff-only on PRs). Uploads JSON results as artifact
-- **gitleaks secret scan** — scans git history for leaked secrets
-- **zizmor workflow audit** — static analysis of GitHub Actions workflows (inline annotations on PRs)
-- **semgrep sast** — Semgrep CE static analysis. Uploads JSON results as artifact
+- **bearer sast** — Bearer static analysis (diff-only on PRs)
+- **gitleaks secret scan** — scans repository for leaked secrets
+- **zizmor workflow audit** — static analysis of GitHub Actions workflows
+- **semgrep sast** — Semgrep CE static analysis (skipped for Dependabot PRs)
 
 ## Setup requirements
 

@@ -57,15 +57,6 @@ jobs:
         uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
         with:
           diff: ${{ github.event_name == 'pull_request' }}
-          format: json
-          output: bearer.json
-      - name: upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
-        if: always()
-        with:
-          name: bearer-report
-          path: bearer.json
-        continue-on-error: true
 
   gitleaks:
     name: gitleaks secret scan
@@ -125,11 +116,4 @@ jobs:
           cache-dependency-glob: |
             package.json
       - name: scan
-        run: uvx semgrep scan --config auto --json --json-output=semgrep.json
-      - name: upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
-        if: always()
-        with:
-          name: semgrep-report
-          path: semgrep.json
-        continue-on-error: true
+        run: uvx semgrep ci --config auto
