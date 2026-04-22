@@ -23,10 +23,10 @@ Runs on every PR to main. Three parallel jobs:
 Five parallel jobs for security scanning:
 
 - **dependency audit** — Socket Security scanner via `bun audit`
-- **bearer sast** — Bearer static analysis (diff-only on PRs)
+- **bearer sast** — Bearer static analysis with inline PR review comments via reviewdog (diff-only on PRs)
 - **gitleaks secret scan** — scans git history for leaked secrets
 - **zizmor workflow audit** — static analysis of GitHub Actions workflows (inline annotations on PRs)
-- **semgrep sast** — Semgrep CE open-source static analysis
+- **semgrep sast** — Semgrep CE static analysis with inline PR review comments via reviewdog
 
 ## Setup requirements
 
