@@ -185,16 +185,23 @@ jobs:
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
       - name: stop server
         run: kill $(lsof -ti:8080) || true
-      - name: build and run docker
+      - name: build docker
         run: |
           docker buildx build -t $TAG -f Dockerfile .
           docker image inspect $TAG
+      - name: run docker
+        run: |
           docker run -d \
             --add-host=host.docker.internal:host-gateway \
             -e DATABASE_URL=postgresql://postgres:PasswordSAMPLE123@host.docker.internal:5444/integration \
             -e REDIS_URL=redis://host.docker.internal:6380/1 \
             -p 8080:8080 \
             --name app-$TAG $TAG
+      - name: check docker vulnerability
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
+        with:
+          image-ref: ${{ env.TAG }}
+          exit-code: 1
       - name: verify docker health
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
