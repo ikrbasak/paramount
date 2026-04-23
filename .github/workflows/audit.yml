@@ -16,49 +16,48 @@ env:
 
 jobs:
   audit:
-    name: audit
+    name: security and code health
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read # bearer needs to read pull request to figure out the diff
+      pull-requests: read
     steps:
-      - name: checkout
+      - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           fetch-depth: 0
-          persist-credentials: true # bearer needs to read pull request to figure out the diff
+          persist-credentials: true
       - name: setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
-      - name: install dependencies
-        run: |
-          bun add -d @socketsecurity/bun-security-scanner
-          echo -e '\n[install.security]\nscanner = "@socketsecurity/bun-security-scanner"' >> bunfig.toml
-          bun install --frozen-lockfile
-      - name: audit
-        run: bun audit --audit-level=moderate
-      - name: fallow
-        run: bunx fallow -f markdown --quiet >> $GITHUB_STEP_SUMMARY
-      - name: bearer
-        uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
-        with:
-          diff: ${{ github.event_name == 'pull_request' }}
-      - name: find secrets
-        run: |
-          docker run --rm -v "$(pwd)":/repository \
-            ghcr.io/gitleaks/gitleaks:latest \
-            detect -v -s=/repository
       - name: setup uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           cache-dependency-glob: |
             package.json
-      - name: zizmor
+      - name: install dependencies
+        run: |
+          bun add -d @socketsecurity/bun-security-scanner
+          echo -e '\n[install.security]\nscanner = "@socketsecurity/bun-security-scanner"' >> bunfig.toml
+          bun install --frozen-lockfile
+      - name: audit dependencies
+        run: bun audit --audit-level=moderate
+      - name: scan code health with fallow
+        run: bunx fallow -f markdown --quiet >> $GITHUB_STEP_SUMMARY
+      - name: scan code with bearer sast
+        uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
+        with:
+          diff: ${{ github.event_name == 'pull_request' }}
+      - name: scan secrets with gitleaks
+        run: |
+          docker run --rm -v "$(pwd)":/repository \
+            ghcr.io/gitleaks/gitleaks:latest \
+            detect -v -s=/repository
+      - name: audit workflows with zizmor
         run: uvx zizmor --format=github -p -c .zizmor.yml .
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: semgrep
-        if: (github.actor != 'dependabot[bot]')
+      - name: scan code with semgrep sast
         run: uvx semgrep ci --config auto

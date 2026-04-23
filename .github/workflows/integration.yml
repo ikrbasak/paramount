@@ -24,15 +24,33 @@ env:
   REDIS_URL: redis://localhost:6380/0
 
   # Docker
-  TAG: paramount
+  DOCKER_TAG: paramount
 
 jobs:
-  validation:
-    name: validate
+  integration:
+    name: validate, test, and health check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        ports: [5444:5432]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: PasswordSAMPLE123
+          POSTGRES_DB: integration
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports: [6380:6379]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
 
     steps:
       - name: checkout repository
@@ -44,133 +62,51 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
-      - name: install
+      - name: install dependencies
         run: bun install
-      - name: commitlint
+      - name: lint commit messages
         if: github.event_name == 'pull_request'
         run: bunx commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      - name: format
+      - name: check formatting
         run: bun run fmt:c
-      - name: lint
+      - name: lint source code
         run: bun run lint:c
-      - name: typecheck
+      - name: typecheck source
         run: bunx tsc
-      - name: typecheck (build)
+      - name: typecheck build config
         run: bunx tsc -p tsconfig.build.json
-      - name: build
+      - name: build application
         run: bun run build
-      - name: lint docker
+      - name: lint dockerfile
         uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 #v3.3.0
         with:
           dockerfile: Dockerfile
-
-  test:
-    name: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-
-    env:
-      LOG_LEVEL: silent
-
-    services:
-      postgres:
-        image: postgres:18-alpine
-        ports: [5444:5432]
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: PasswordSAMPLE123
-          POSTGRES_DB: integration
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 5
-      redis:
-        image: redis:8-alpine
-        ports: [6380:6379]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s --health-timeout 5s --health-retries 5
-
-    steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          persist-credentials: false
-      - name: setup bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
-        with:
-          bun-version-file: .bun-version
-      - name: install
-        run: bun install
-      - name: migrate
+      - name: run database migrations
         run: make migration:run
-      - name: seed
+      - name: run database seeders
         run: make seeder:run
-      - name: check migrations
+      - name: check migration integrity
         run: make migration:check
-      - name: test with coverage
+      - name: run tests with coverage
         run: bun run test:cov
         env:
           NODE_ENV: test
-      - name: collect reports
+          LOG_LEVEL: silent
+      - name: collect test reports
         run: mkdir -p coverage && mv junit* coverage
-        if: always()
-      - name: upload coverage
+        if: ${{ !cancelled() }}
+      - name: upload coverage report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           name: coverage
           path: coverage/
-
-  health:
-    name: health check
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-
-    services:
-      postgres:
-        image: postgres:18-alpine
-        ports: [5444:5432]
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: PasswordSAMPLE123
-          POSTGRES_DB: integration
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 5
-      redis:
-        image: redis:8-alpine
-        ports: [6380:6379]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s --health-timeout 5s --health-retries 5
-
-    steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          persist-credentials: false
-      - name: setup bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
-        with:
-          bun-version-file: .bun-version
-      - name: install
-        run: bun install
-      - name: build
-        run: bun run build
-      - name: migrate
-        run: make migration:run
-      - name: seed
-        run: make seeder:run
-      - name: start server
+      - name: start native server
         run: nohup bun build/index.js > bun.log 2>&1 &
-      - name: verify native health
+      - name: verify native health endpoint
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           timeout_seconds: 2
@@ -178,24 +114,24 @@ jobs:
           retry_wait_seconds: 2
           warning_on_retry: false
           command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
-      - name: stop server
+      - name: stop native server
         run: kill $(lsof -ti:8080) || true
-      - name: build docker
-        run: docker buildx build -t $TAG -f Dockerfile .
-      - name: run docker
+      - name: build docker image
+        run: docker buildx build -t $DOCKER_TAG -f Dockerfile .
+      - name: start docker container
         run: |
           docker run -d \
             --add-host=host.docker.internal:host-gateway \
             -e DATABASE_URL=postgresql://postgres:PasswordSAMPLE123@host.docker.internal:5444/integration \
             -e REDIS_URL=redis://host.docker.internal:6380/1 \
             -p 8080:8080 \
-            --name app-$TAG $TAG
-      - name: check docker vulnerability
+            --name app-$DOCKER_TAG $DOCKER_TAG
+      - name: scan docker image for vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
         with:
-          image-ref: ${{ env.TAG }}
+          image-ref: ${{ env.DOCKER_TAG }}
           exit-code: 1
-      - name: verify docker health
+      - name: verify docker health endpoint
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           timeout_seconds: 2
