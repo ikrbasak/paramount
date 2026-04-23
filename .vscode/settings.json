@@ -37,10 +37,5 @@
     "source.organizeImports": "never",
     "source.fixAll.oxc": "always",
     "source.fixAll": "always"
-  },
-  "knip.configFilePath": "knip.config.ts",
-  "knip.requireConfig": true,
-  "knip.editor.dependencies.hover.enabled": false,
-  "knip.editor.exports.codelens.enabled": false,
-  "knip.editor.exports.highlight.dimClassMembers": false
+  }
 }

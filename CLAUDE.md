@@ -16,8 +16,6 @@ bun run build              # prebuild (tsc) + bundle (bun)
 # Code quality (run all after changes)
 bun run fmt                # format with oxfmt
 bun run lint               # lint with oxlint --fix
-bun run knip               # find unused files/exports
-bun run knip:p             # check production unused only
 bun run build              # verify TypeScript compiles
 
 # Testing
@@ -33,7 +31,7 @@ make seeder:run            # run pending seeders
 
 ## Workflow rules
 
-- **After every file change**: run `bun run fmt`, `bun run lint`, `bun run knip`, `bun run knip:p`, and `bun run build` before work done.
+- **After every file change**: run `bun run fmt`, `bun run lint`, and `bun run build` before work done.
 - **Imports**: use absolute imports via path aliases (`@/`, `~/`, `#/`) — no relative paths.
 - **Runtime**: Bun only. Never use `npm`, `pnpm`, or `yarn`.
 - **Dependencies**: prefer Bun built-ins (`Bun.serve`, `Bun.password`, etc.) before packages. If package needed, explain in 2–3 sentences and ask confirmation before adding.
