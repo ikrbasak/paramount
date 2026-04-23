@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
-    isolate: false,
+    isolate: true,
     alias: {
       '~': join(process.cwd(), 'tests/'),
       '@': join(process.cwd(), 'src/'),
@@ -44,5 +44,9 @@ export default defineConfig({
     sequence: { shuffle: { files: true, tests: false } },
     setupFiles: ['tests/setup/test.setup.ts'],
     globalSetup: ['tests/setup/test.global.setup.ts'],
+    experimental: {
+      fsModuleCache: true,
+      fsModuleCachePath: '.cache/vitest/',
+    },
   },
 });
