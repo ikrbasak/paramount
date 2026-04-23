@@ -157,3 +157,7 @@ bundle-stats.*
 # Agents (local tool state, project knowledge, skills)
 .agents/
 skills-lock.json
+
+# Fallow
+.fallow
+
