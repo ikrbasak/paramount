@@ -3,9 +3,6 @@ name: Audit
 on:
   pull_request:
     branches: [main]
-  schedule:
-    # Runs every Sunday at 00:00 UTC
-    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 permissions: {}
@@ -19,16 +16,18 @@ env:
 
 jobs:
   audit:
-    name: dependency audit
+    name: audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # bearer needs to read pull request to figure out the diff
     steps:
       - name: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
-          persist-credentials: false
+          fetch-depth: 0
+          persist-credentials: true # bearer needs to read pull request to figure out the diff
       - name: setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
@@ -40,54 +39,17 @@ jobs:
           bun install --frozen-lockfile
       - name: audit
         run: bun audit --audit-level=moderate
-
-  bearer:
-    name: bearer sast
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read # bearer needs to read pull request to figure out the diff
-    steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          persist-credentials: true # bearer needs to read pull request to figure out the diff
+      - name: fallow
+        run: bunx fallow -f markdown --quiet >> $GITHUB_STEP_SUMMARY
       - name: bearer
         uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
         with:
           diff: ${{ github.event_name == 'pull_request' }}
-
-  gitleaks:
-    name: gitleaks secret scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 1
-          persist-credentials: false
       - name: find secrets
         run: |
           docker run --rm -v "$(pwd)":/repository \
             ghcr.io/gitleaks/gitleaks:latest \
             detect -v -s=/repository
-
-  zizmor:
-    name: zizmor workflow audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          persist-credentials: false
       - name: setup uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -97,23 +59,6 @@ jobs:
         run: uvx zizmor --format=github -p -c .zizmor.yml .
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  semgrep:
-    name: semgrep sast
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    if: (github.actor != 'dependabot[bot]')
-    steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-        with:
-          persist-credentials: false
-      - name: setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          cache-dependency-glob: |
-            package.json
-      - name: scan
+      - name: semgrep
+        if: (github.actor != 'dependabot[bot]')
         run: uvx semgrep ci --config auto
