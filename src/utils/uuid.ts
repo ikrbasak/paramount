@@ -1,5 +1,3 @@
-import { randomUUIDv7 } from 'bun';
-
 export class UuidUtil {
   static serialize(id: string) {
     return id.replaceAll('-', '');
@@ -10,6 +8,6 @@ export class UuidUtil {
   }
 
   static generate() {
-    return randomUUIDv7();
+    return Bun.randomUUIDv7();
   }
 }

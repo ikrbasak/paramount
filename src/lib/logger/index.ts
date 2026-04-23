@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-import type { MaybePromise } from 'bun';
 import pino, { stdSerializers } from 'pino';
 
 import { UuidUtil } from '@/utils/uuid';
@@ -21,7 +20,7 @@ const baseLogger = pino({
   serializers: { err: stdSerializers.errWithCause, error: stdSerializers.errWithCause },
 });
 
-export const withLogContext = <T>(fn: () => MaybePromise<T>) =>
+export const withLogContext = <T>(fn: () => Bun.MaybePromise<T>) =>
   logContextStorage.run(baseLogger.child({ correlationId: UuidUtil.generate() }), fn);
 
 export const logger: pino.Logger = new Proxy(baseLogger, {
