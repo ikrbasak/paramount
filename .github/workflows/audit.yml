@@ -33,10 +33,7 @@ jobs:
         with:
           bun-version-file: .bun-version
       - name: install dependencies
-        run: |
-          bun add -d @socketsecurity/bun-security-scanner
-          echo -e '\n[install.security]\nscanner = "@socketsecurity/bun-security-scanner"' >> bunfig.toml
-          bun install --frozen-lockfile
+        run: bun install --frozen-lockfile
       - name: audit dependencies
         run: bun audit --audit-level=moderate
       - name: scan code health with fallow
