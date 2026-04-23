@@ -15,19 +15,17 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  audit:
-    name: security and code health
+  dependency:
+    name: dependency audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read # required by bearer
     steps:
       - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
-          fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
       - name: setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
@@ -36,17 +34,53 @@ jobs:
         run: bun install --frozen-lockfile
       - name: audit dependencies
         run: bun audit --audit-level=moderate
-      - name: scan code health with fallow
-        run: bunx fallow -f markdown --quiet >> $GITHUB_STEP_SUMMARY
-      - name: scan code with bearer sast
+
+  bearer:
+    name: bearer sast
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # required by bearer for diff analysis
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: true
+      - name: scan code with bearer
         uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
         with:
           diff: ${{ github.event_name == 'pull_request' }}
+
+  gitleaks:
+    name: gitleaks secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: scan secrets with gitleaks
         run: |
           docker run --rm -v "$(pwd)":/repository \
             ghcr.io/gitleaks/gitleaks:latest \
             detect -v -s=/repository
+
+  zizmor:
+    name: zizmor workflow audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
       - name: audit workflows with zizmor
         run: |
           docker run --rm -v "$(pwd)":/repository \
@@ -55,5 +89,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORMAT: ${{ github.event_name == 'pull_request' && 'github' || 'plain' }}
-      - name: scan code with semgrep sast
+
+  semgrep:
+    name: semgrep sast
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
+      - name: scan code with semgrep
         run: docker run --rm -v "$(pwd)":/src semgrep/semgrep semgrep ci --config auto

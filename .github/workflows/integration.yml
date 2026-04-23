@@ -27,10 +27,10 @@ env:
   DOCKER_TAG: paramount
 
 jobs:
-  integration:
-    name: validate, test, and health check
+  quality:
+    name: code quality and health check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
       contents: read
 
@@ -80,10 +80,61 @@ jobs:
         run: bunx tsc -p tsconfig.build.json
       - name: build application
         run: bun run build
-      - name: lint dockerfile
-        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 #v3.3.0
+      - name: scan code health with fallow
+        run: bunx fallow -f markdown --quiet >> $GITHUB_STEP_SUMMARY
+      - name: run database migrations
+        run: make migration:run
+      - name: run database seeders
+        run: make seeder:run
+      - name: start native server
+        run: nohup bun build/index.js > bun.log 2>&1 &
+      - name: verify native health endpoint
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
-          dockerfile: Dockerfile
+          timeout_seconds: 2
+          max_attempts: 5
+          retry_wait_seconds: 2
+          warning_on_retry: false
+          command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
+      - name: stop native server
+        run: kill $(lsof -ti:8080) || true
+
+  test:
+    name: migration and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        ports: [5444:5432]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: PasswordSAMPLE123
+          POSTGRES_DB: integration
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports: [6380:6379]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: install dependencies
+        run: bun install --frozen-lockfile
       - name: run database migrations
         run: make migration:run
       - name: run database seeders
@@ -104,20 +155,53 @@ jobs:
         with:
           name: coverage
           path: coverage/
-      - name: start native server
-        run: nohup bun build/index.js > bun.log 2>&1 &
-      - name: verify native health endpoint
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
+
+  docker:
+    name: docker lint, health check, and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        ports: [5444:5432]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: PasswordSAMPLE123
+          POSTGRES_DB: integration
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports: [6380:6379]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
-          timeout_seconds: 2
-          max_attempts: 5
-          retry_wait_seconds: 2
-          warning_on_retry: false
-          command: curl -sf http://localhost:8080/api/v1/health | jq -r '.success' | grep -q true
-      - name: stop native server
-        run: kill $(lsof -ti:8080) || true
+          persist-credentials: false
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: install dependencies
+        run: bun install --frozen-lockfile
+      - name: lint dockerfile
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 #v3.3.0
+        with:
+          dockerfile: Dockerfile
       - name: build docker image
         run: docker buildx build -t $DOCKER_TAG -f Dockerfile .
+      - name: run database migrations
+        run: make migration:run
+      - name: run database seeders
+        run: make seeder:run
       - name: start docker container
         run: |
           docker run -d \
