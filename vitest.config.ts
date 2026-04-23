@@ -17,7 +17,7 @@ export default defineConfig({
       exclude: ['**/*.d.ts', '**/_*', '**/_*/**', 'src/index.ts', 'src/types'],
       include: ['src/**'],
       provider: 'istanbul',
-      reporter: ['text', 'html', 'cobertura', 'json', 'json-summary'],
+      reporter: ['cobertura', 'text-summary', 'json', 'html'],
       reportOnFailure: true,
       reportsDirectory: 'coverage',
       // NOTE Keep track of thresholds, and update if necessary
