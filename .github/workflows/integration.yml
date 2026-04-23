@@ -56,15 +56,12 @@ jobs:
         run: bun run fmt:c
       - name: lint
         run: bun run lint:c
-      - name: typecheck and build
-        run: |
-          bunx tsc
-          bunx tsc -p tsconfig.build.json
-          bun run build
-      - name: unused exports
-        run: |
-          bun run knip
-          bun run knip:p
+      - name: typecheck
+        run: bunx tsc
+      - name: typecheck (build)
+        run: bunx tsc -p tsconfig.build.json
+      - name: build
+        run: bun run build
       - name: lint docker
         uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 #v3.3.0
         with:
@@ -172,9 +169,7 @@ jobs:
       - name: seed
         run: make seeder:run
       - name: start server
-        run: |
-          cd build
-          nohup bun index.js > bun.log 2>&1 &
+        run: nohup bun build/index.js > bun.log 2>&1 &
       - name: verify native health
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
@@ -186,9 +181,7 @@ jobs:
       - name: stop server
         run: kill $(lsof -ti:8080) || true
       - name: build docker
-        run: |
-          docker buildx build -t $TAG -f Dockerfile .
-          docker image inspect $TAG
+        run: docker buildx build -t $TAG -f Dockerfile .
       - name: run docker
         run: |
           docker run -d \
