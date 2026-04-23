@@ -39,4 +39,4 @@ export const User = defineEntity({
   ],
 });
 
-export type User = InferEntity<typeof User>;
+type User = InferEntity<typeof User>;

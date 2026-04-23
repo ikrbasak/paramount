@@ -1,4 +1,4 @@
-export type BaseJobData = {
+type BaseJobData = {
   upstream?: string | number;
 };
 
