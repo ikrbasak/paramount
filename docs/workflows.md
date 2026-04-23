@@ -29,15 +29,15 @@ Single job (`integration`) with Postgres and Redis service containers. Steps run
 
 Single job (`audit`) for security scanning and code health analysis.
 
-| Phase                | Steps                                                          | Details                                                                                                                  |
-| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Setup**            | checkout repository, setup bun, setup uv, install dependencies | `fetch-depth: 0` and `persist-credentials: true` for bearer diff analysis; Socket Security scanner added at install time |
-| **Dependency audit** | audit dependencies                                             | `bun audit --audit-level=moderate` via Socket Security                                                                   |
-| **Code health**      | scan code health with fallow                                   | Outputs markdown report to GitHub job summary                                                                            |
-| **SAST**             | scan code with bearer sast                                     | Diff-only mode on pull requests                                                                                          |
-| **Secret scanning**  | scan secrets with gitleaks                                     | Runs gitleaks via Docker against the repository                                                                          |
-| **Workflow audit**   | audit workflows with zizmor                                    | Static analysis of GitHub Actions workflow files                                                                         |
-| **SAST (Semgrep)**   | scan code with semgrep sast                                    | Skipped for Dependabot PRs                                                                                               |
+| Phase                | Steps                                                | Details                                                                                                                  |
+| -------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Setup**            | checkout repository, setup bun, install dependencies | `fetch-depth: 0` and `persist-credentials: true` for bearer diff analysis; Socket Security scanner added at install time |
+| **Dependency audit** | audit dependencies                                   | `bun audit --audit-level=moderate` via Socket Security                                                                   |
+| **Code health**      | scan code health with fallow                         | Outputs markdown report to GitHub job summary                                                                            |
+| **SAST**             | scan code with bearer sast                           | Diff-only mode on pull requests                                                                                          |
+| **Secret scanning**  | scan secrets with gitleaks                           | Runs gitleaks via Docker against the repository                                                                          |
+| **Workflow audit**   | audit workflows with zizmor                          | Runs via Docker; static analysis of GitHub Actions workflow files                                                        |
+| **SAST (Semgrep)**   | scan code with semgrep sast                          | Runs via Docker; Semgrep CE static analysis                                                                              |
 
 **Timeout:** 5 minutes. **Permissions:** `contents: read`, `pull-requests: read`.
 

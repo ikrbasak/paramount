@@ -32,11 +32,6 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 #v2.2.0
         with:
           bun-version-file: .bun-version
-      - name: setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          cache-dependency-glob: |
-            package.json
       - name: install dependencies
         run: |
           bun add -d @socketsecurity/bun-security-scanner
@@ -56,8 +51,12 @@ jobs:
             ghcr.io/gitleaks/gitleaks:latest \
             detect -v -s=/repository
       - name: audit workflows with zizmor
-        run: uvx zizmor --format=github -p -c .zizmor.yml .
+        run: |
+          docker run --rm -v "$(pwd)":/repository \
+            ghcr.io/zizmorcore/zizmor:latest \
+            --format=$FORMAT -p -c /repository/.zizmor.yml /repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORMAT: ${{ github.event_name == 'pull_request' && 'github' || 'plain' }}
       - name: scan code with semgrep sast
-        run: uvx semgrep ci --config auto
+        run: docker run --rm -v "$(pwd)":/src semgrep/semgrep semgrep ci --config auto
