@@ -135,7 +135,7 @@ jobs:
       - name: scan code with semgrep
         run: |
           docker run --rm -v "$(pwd)":/src semgrep/semgrep \
-            semgrep ci --config auto --sarif --sarif-output /src/semgrep-results.sarif
+            semgrep scan --config auto --sarif --sarif-output /src/semgrep-results.sarif /src
       - name: upload sarif results
         if: ${{ !cancelled() }}
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 #v4.35.2
