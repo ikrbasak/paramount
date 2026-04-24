@@ -42,6 +42,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read # required by bearer for diff analysis
+      security-events: write # required by codeql to upload sarif results
     steps:
       - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
@@ -51,6 +52,14 @@ jobs:
         uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc #v2
         with:
           diff: ${{ github.event_name == 'pull_request' }}
+          format: sarif
+          output: bearer-results.sarif
+      - name: upload sarif results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a #v3.35.2
+        with:
+          sarif_file: bearer-results.sarif
+          category: bearer
 
   gitleaks:
     name: gitleaks secret scan
@@ -58,6 +67,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      security-events: write # required by codeql to upload sarif results
     steps:
       - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
@@ -68,7 +78,14 @@ jobs:
         run: |
           docker run --rm -v "$(pwd)":/repository \
             ghcr.io/gitleaks/gitleaks:latest \
-            detect -v -s=/repository
+            detect -v -s=/repository \
+            --report-format sarif --report-path /repository/gitleaks-results.sarif
+      - name: upload sarif results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a #v3.35.2
+        with:
+          sarif_file: gitleaks-results.sarif
+          category: gitleaks
 
   zizmor:
     name: zizmor workflow audit
@@ -76,6 +93,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      security-events: write # required by codeql to upload sarif results
     steps:
       - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
@@ -85,10 +103,16 @@ jobs:
         run: |
           docker run --rm -v "$(pwd)":/repository \
             ghcr.io/zizmorcore/zizmor:latest \
-            --format=$FORMAT -p -c /repository/.zizmor.yml /repository
+            --format sarif -p -c /repository/.zizmor.yml /repository \
+            > zizmor-results.sarif
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORMAT: ${{ github.event_name == 'pull_request' && 'github' || 'plain' }}
+      - name: upload sarif results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a #v3.35.2
+        with:
+          sarif_file: zizmor-results.sarif
+          category: zizmor
 
   semgrep:
     name: semgrep sast
@@ -96,10 +120,19 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      security-events: write # required by codeql to upload sarif results
     steps:
       - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           persist-credentials: false
       - name: scan code with semgrep
-        run: docker run --rm -v "$(pwd)":/src semgrep/semgrep semgrep ci --config auto
+        run: |
+          docker run --rm -v "$(pwd)":/src semgrep/semgrep \
+            semgrep ci --config auto --sarif --sarif-output /src/semgrep-results.sarif
+      - name: upload sarif results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a #v3.35.2
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep

@@ -26,15 +26,27 @@ Three parallel jobs with Postgres and Redis service containers:
 
 Five parallel jobs for security scanning:
 
-| Job            | Name                  | Steps                                            | Details                                                            |
-| -------------- | --------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
-| **dependency** | dependency audit      | checkout, setup bun, install, audit dependencies | `bun audit --audit-level=moderate`                                 |
-| **bearer**     | bearer sast           | checkout, scan code with bearer                  | Diff-only on PRs; requires `pull-requests: read` for diff analysis |
-| **gitleaks**   | gitleaks secret scan  | checkout, scan secrets with gitleaks             | Runs via Docker; `fetch-depth: 0` for full history scan            |
-| **zizmor**     | zizmor workflow audit | checkout, audit workflows with zizmor            | Runs via Docker; uses `github` format on PRs, `plain` otherwise    |
-| **semgrep**    | semgrep sast          | checkout, scan code with semgrep                 | Runs via Docker; Semgrep CE static analysis                        |
+| Job            | Name                  | Steps                                               | Details                                                            |
+| -------------- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| **dependency** | dependency audit      | checkout, setup bun, install, audit dependencies    | `bun audit --audit-level=moderate`                                 |
+| **bearer**     | bearer sast           | checkout, scan code with bearer, upload sarif       | Diff-only on PRs; requires `pull-requests: read` for diff analysis |
+| **gitleaks**   | gitleaks secret scan  | checkout, scan secrets with gitleaks, upload sarif  | Runs via Docker; `fetch-depth: 0` for full history scan            |
+| **zizmor**     | zizmor workflow audit | checkout, audit workflows with zizmor, upload sarif | Runs via Docker; SARIF output piped to file                        |
+| **semgrep**    | semgrep sast          | checkout, scan code with semgrep, upload sarif      | Runs via Docker; Semgrep CE static analysis                        |
 
-**Timeout:** 5 minutes per job. **Permissions:** `contents: read` (bearer additionally requires `pull-requests: read`).
+**Timeout:** 5 minutes per job. **Permissions:** `contents: read` (bearer additionally requires `pull-requests: read`). Bearer, gitleaks, zizmor, and semgrep jobs additionally require `security-events: write` to upload SARIF results to GitHub's code scanning.
+
+### CodeQL (`codeql.yml`)
+
+**Triggers:** `pull_request` (to `main`), `workflow_dispatch`
+
+Single job for GitHub code scanning:
+
+| Job         | Name            | Steps                                     | Details                                                                   |
+| ----------- | --------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| **analyze** | codeql analysis | checkout, initialize codeql, run analysis | Scans JavaScript/TypeScript; uploads SARIF results to GitHub Security tab |
+
+**Timeout:** 5 minutes. **Permissions:** `contents: read`, `security-events: write` (required to upload SARIF results).
 
 ## Setup requirements
 
