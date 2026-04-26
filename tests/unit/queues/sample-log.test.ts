@@ -28,14 +28,15 @@ describe('sample log queue', () => {
   });
 
   it('should log the content when the processor runs', async () => {
-    const spy = vi.spyOn(logger, 'info');
+    const spy = vi.spyOn(logger, 'log');
 
     const job = await queue.dispatch({ content: 'log this' });
     await worker.processor(job);
 
     expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ content: 'log this' }),
+      'info',
       'sample:log:completed',
+      expect.objectContaining({ content: 'log this' }),
     );
 
     spy.mockRestore();
