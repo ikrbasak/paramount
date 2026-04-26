@@ -14,7 +14,7 @@ import { databaseEnvironmentSchema } from '@/validators/schemas/environment';
 const result = databaseEnvironmentSchema.readonly().safeParse(process.env);
 
 if (result.error) {
-  logger.error({ issues: result.error.issues }, 'config:db:env:failed');
+  logger.log('error', 'config:db:env:failed', { issues: result.error.issues });
   // oxlint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 }
@@ -30,7 +30,7 @@ class OrmLogger extends DefaultLogger {
     }
 
     const { query, params, took, results } = context;
-    logger.debug({ query, params, took, results }, `orm:${namespace}`);
+    logger.log('debug', 'orm:debug', { query, params, took, results, namespace });
   }
 }
 

@@ -6,8 +6,8 @@ import { logger } from '@/lib/logger';
 
 export const cacheClient = new Redis(env.REDIS_URL, cacheRedisOptions);
 
-cacheClient.on('error', (error) => logger.error({ error }, 'redis:cache:error'));
+cacheClient.on('error', (error) => logger.log('error', 'redis:cache:error', { error }));
 cacheClient.on('reconnecting', (delay: number) =>
-  logger.warn({ delay }, 'redis:cache:reconnecting'),
+  logger.log('warn', 'redis:cache:reconnecting', { delay }),
 );
-cacheClient.on('end', () => logger.warn('redis:cache:end'));
+cacheClient.on('end', () => logger.log('warn', 'redis:cache:end'));

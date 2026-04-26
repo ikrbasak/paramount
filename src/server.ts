@@ -32,10 +32,10 @@ export const server = new Hono({
     await withLogContext(async () => {
       const now = performance.now();
       const { url, method } = c.req;
-      logger.debug({ reqId: c.get('requestId'), url, method }, 'hono:req:context');
+      logger.add('hono:req:context', { reqId: c.get('requestId'), url, method });
 
       await next();
-      logger.debug({ duration: performance.now() - now }, 'hono:req:completed');
+      logger.add('hono:req:completed', { duration: performance.now() - now });
     });
   })
   .use(
@@ -76,9 +76,9 @@ export const server = new Hono({
     const { status, cause, stack, message } = ErrorFormat.format(error);
 
     if (status >= HttpStatus.InternalServerError) {
-      logger.error({ message, stack, cause }, 'hono:req:failed');
+      logger.log('error', 'hono:req:failed', { message, stack, cause });
     } else {
-      logger.debug({ message, stack, cause }, 'hono:req:failed');
+      logger.log('debug', 'hono:req:failed', { message, stack, cause });
     }
 
     return c.json(

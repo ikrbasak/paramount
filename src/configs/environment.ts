@@ -8,7 +8,7 @@ dotenv.config({ purge_dotenv: true, silent: true });
 const result = environmentSchema.safeParse(process.env);
 
 if (result.error) {
-  logger.error({ issues: result.error.issues }, 'config:env:failed');
+  logger.log('error', 'config:env:failed', { issues: result.error.issues });
   // oxlint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 }

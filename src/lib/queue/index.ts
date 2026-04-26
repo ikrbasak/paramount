@@ -48,17 +48,17 @@ export abstract class BaseWorker<TName extends keyof JobRegistry> extends Worker
         const { upstream } = job.data;
         await withLogContext(async () => {
           const start = performance.now();
-          logger.debug({ jobId: job.id, queue: name, upstream }, 'bull:job:started');
+          logger.add('bull:job:started', { jobId: job.id, queue: name, upstream });
 
           try {
             await withOrmContext(() => this.processor(job));
-            logger.debug('bull:job:succeeded');
+            logger.add('bull:job:succeeded');
           } catch (error) {
             const remaining = (job.opts.attempts ?? 1) - job.attemptsStarted;
-            logger[remaining <= 0 ? 'error' : 'warn']({ error, remaining }, 'bull:job:failed');
+            logger.log(remaining <= 0 ? 'error' : 'warn', 'bull:job:failed', { error, remaining });
             throw error;
           } finally {
-            logger.debug({ duration: performance.now() - start }, 'bull:job:completed');
+            logger.add('bull:job:completed', { duration: performance.now() - start });
           }
         });
 
@@ -73,10 +73,12 @@ export abstract class BaseWorker<TName extends keyof JobRegistry> extends Worker
     );
 
     this.on('failed', (job, error) =>
-      logger.error({ queue: name, jobId: job?.id, error }, 'bull:worker:failed'),
+      logger.log('error', 'bull:worker:failed', { queue: name, jobId: job?.id, error }),
     );
-    this.on('error', (error) => logger.error({ queue: name, error }, 'bull:worker:error'));
-    this.on('stalled', (jobId) => logger.warn({ queue: name, jobId }, 'bull:worker:stalled'));
+    this.on('error', (error) => logger.log('error', 'bull:worker:error', { queue: name, error }));
+    this.on('stalled', (jobId) =>
+      logger.log('warn', 'bull:worker:stalled', { queue: name, jobId }),
+    );
   }
 
   abstract processor(job: Job<JobRegistry[TName], null, TName>): Promise<void>;
