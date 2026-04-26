@@ -21,4 +21,3 @@ gitleaks git --platform=github --verbose
 bun run fmt:c
 bun run lint:c
 bun run build
-bunx fallow
