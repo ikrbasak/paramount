@@ -127,7 +127,7 @@ Centralized in `src/constants/`:
 - **`APIRoute`** — route path strings (`satisfies Record<string, string>`). **`APIRouteVersion`** — version prefixes (e.g. `/api/v1`). Never hardcode paths in handlers.
 - **`ErrorMessage.Generic.*`** — static strings. **`ErrorMessage.Field.*`** — parameterized factories (e.g. `ErrorMessage.Field.LabelNotFound('User')`). Never hardcode messages inline.
 - **`HttpStatus`** — HTTP status code enum.
-- When defining time values, use named constants — no magic numbers.
+- When defining time values, use named constants — no magic numbers. Name TTL / duration constants descriptively as `DEFAULT_MAX_TTL`, `SESSION_TIMEOUT`, etc. — never generic names like `SEVEN_DAYS` or `ONE_HOUR`.
 
 ### Logging
 
