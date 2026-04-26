@@ -48,17 +48,17 @@ export abstract class BaseWorker<TName extends keyof JobRegistry> extends Worker
         const { upstream } = job.data;
         await withLogContext(async () => {
           const start = performance.now();
-          logger.add('bull:job:started', { jobId: job.id, queue: name, upstream });
+          logger.log('info', 'bull:job:started', { jobId: job.id, queue: name, upstream });
 
           try {
             await withOrmContext(() => this.processor(job));
-            logger.add('bull:job:succeeded');
+            logger.log('info', 'bull:job:succeeded');
           } catch (error) {
             const remaining = (job.opts.attempts ?? 1) - job.attemptsStarted;
             logger.log(remaining <= 0 ? 'error' : 'warn', 'bull:job:failed', { error, remaining });
             throw error;
           } finally {
-            logger.add('bull:job:completed', { duration: performance.now() - start });
+            logger.log('info', 'bull:job:completed', { duration: performance.now() - start });
           }
         });
 

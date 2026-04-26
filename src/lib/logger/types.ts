@@ -40,8 +40,13 @@ export type AuditRegistry = LogRegistry & {
 
 export type WideEvent = {
   key: string;
-  time: number;
+  level: LogLevel;
+  ts: number;
   [field: string]: unknown;
+};
+
+export type LogOptions = {
+  immediate?: boolean;
 };
 
 // oxlint-disable-next-line no-invalid-void-type

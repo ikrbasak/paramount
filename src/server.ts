@@ -32,10 +32,10 @@ export const server = new Hono({
     await withLogContext(async () => {
       const now = performance.now();
       const { url, method } = c.req;
-      logger.add('hono:req:context', { reqId: c.get('requestId'), url, method });
+      logger.log('info', 'hono:req:context', { reqId: c.get('requestId'), url, method });
 
       await next();
-      logger.add('hono:req:completed', { duration: performance.now() - now });
+      logger.log('info', 'hono:req:completed', { duration: performance.now() - now });
     });
   })
   .use(

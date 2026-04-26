@@ -3,23 +3,22 @@ import { describe, expect, it } from 'vitest';
 import { logger, withLogContext } from '@/lib/logger';
 
 describe('typed logger with async context propagation', () => {
-  it('should expose log, audit, add, and flush methods', () => {
+  it('should expose log, audit, and flush methods', () => {
     expect(typeof logger.log).toBe('function');
     expect(typeof logger.audit).toBe('function');
-    expect(typeof logger.add).toBe('function');
     expect(typeof logger.flush).toBe('function');
   });
 
   it('should accumulate wide event data inside withLogContext', async () => {
-    let flushed = false;
+    let completed = false;
 
     await withLogContext(() => {
-      logger.add('hono:req:context', { reqId: 'test-id', url: '/test', method: 'GET' });
-      logger.add('hono:req:completed', { duration: 42 });
-      flushed = true;
+      logger.log('info', 'hono:req:context', { reqId: 'test-id', url: '/test', method: 'GET' });
+      logger.log('info', 'hono:req:completed', { duration: 42 });
+      completed = true;
     });
 
-    expect(flushed).toBeTruthy();
+    expect(completed).toBeTruthy();
   });
 
   it('should isolate contexts across concurrent withLogContext calls', async () => {
@@ -27,11 +26,11 @@ describe('typed logger with async context propagation', () => {
 
     await Promise.all([
       withLogContext(() => {
-        logger.add('hono:req:context', { reqId: 'a', url: '/a', method: 'GET' });
+        logger.log('info', 'hono:req:context', { reqId: 'a', url: '/a', method: 'GET' });
         results.push(true);
       }),
       withLogContext(() => {
-        logger.add('hono:req:context', { reqId: 'b', url: '/b', method: 'POST' });
+        logger.log('info', 'hono:req:context', { reqId: 'b', url: '/b', method: 'POST' });
         results.push(true);
       }),
     ]);
@@ -44,7 +43,7 @@ describe('typed logger with async context propagation', () => {
 
     await withLogContext(async () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
-      logger.add('hono:req:completed', { duration: 10 });
+      logger.log('info', 'hono:req:completed', { duration: 10 });
       completed = true;
     });
 
