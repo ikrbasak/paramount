@@ -17,8 +17,11 @@ export type LogContextStore = {
 
 type ParsedLogArgs = {
   data: object | undefined;
-  options: unknown;
+  options: LogOptions | undefined;
 };
+
+const isLogOptions = (val: unknown): val is LogOptions =>
+  val !== null && typeof val === 'object' && 'immediate' in val;
 
 type LogArgs<K extends keyof LogRegistry> = LogRegistry[K] extends NoData
   ? [level: LogLevel, key: K, options?: LogOptions]
@@ -52,13 +55,14 @@ export class TypedLogger {
 
     if (args.length === 1) {
       const first = args[0];
-      if (first && typeof first === 'object' && 'immediate' in first) {
+      if (isLogOptions(first)) {
         return { data: undefined, options: first };
       }
       return { data: (first ?? undefined) as object | undefined, options: undefined };
     }
 
-    return { data: (args[0] ?? undefined) as object | undefined, options: args[1] };
+    const options = isLogOptions(args[1]) ? args[1] : undefined;
+    return { data: (args[0] ?? undefined) as object | undefined, options };
   }
 
   log<K extends keyof LogRegistry>(...logArgs: LogArgs<K>): void {
@@ -74,7 +78,7 @@ export class TypedLogger {
       }
       store.events.push(event);
 
-      if (options && typeof options === 'object' && 'immediate' in options && options.immediate) {
+      if (options?.immediate) {
         this.emit(store.logger, level, key, data);
       }
     } else {
