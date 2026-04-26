@@ -1,6 +1,22 @@
 #!/usr/bin/env sh
 set -e
 
+stash_name="pre-push-stash-$(date +%s)"
+needs_pop=0
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  git stash push -q -m "$stash_name" --include-untracked
+  needs_pop=1
+fi
+
+pop_stash() {
+  if [ "$needs_pop" -eq 1 ]; then
+    git stash pop -q
+  fi
+}
+
+trap pop_stash EXIT
+
 gitleaks git --platform=github --verbose
 bun run fmt:c
 bun run lint:c
