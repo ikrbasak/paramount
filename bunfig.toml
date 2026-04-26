@@ -4,3 +4,5 @@ env = false
 
 [install]
 auto = "disable"
+minimumReleaseAge = 604800
+minimumReleaseAgeExcludes = ["typescript"]
