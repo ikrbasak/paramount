@@ -4,6 +4,8 @@ export type NoData = void;
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export type LogRegistry = {
+  'hono:req:context': { reqId: string; url: string; method: string };
+  'hono:req:completed': { duration: number };
   'hono:req:failed': { message: string; stack?: string; cause?: unknown };
 
   'redis:cache:error': { error: unknown };
@@ -21,7 +23,10 @@ export type LogRegistry = {
     namespace: string;
   };
 
+  'bull:job:started': { jobId: string | undefined; queue: string; upstream?: unknown };
+  'bull:job:succeeded': NoData;
   'bull:job:failed': { error: unknown; remaining: number };
+  'bull:job:completed': { duration: number };
   'bull:worker:failed': { queue: string; jobId?: string; error: unknown };
   'bull:worker:error': { queue: string; error: unknown };
   'bull:worker:stalled': { queue: string; jobId: string };
@@ -29,17 +34,14 @@ export type LogRegistry = {
   'sample:log:completed': { jobId: string | undefined; content: string };
 };
 
-export type AddRegistry = {
-  'hono:req:context': { reqId: string; url: string; method: string };
-  'hono:req:completed': { duration: number };
-
-  'bull:job:started': { jobId: string | undefined; queue: string; upstream?: unknown };
-  'bull:job:succeeded': NoData;
-  'bull:job:completed': { duration: number };
+export type AuditRegistry = LogRegistry & {
+  'sample:audit': { message: string };
 };
 
-export type AuditRegistry = {
-  'sample:audit': { message: string };
+export type WideEvent = {
+  key: string;
+  time: number;
+  [field: string]: unknown;
 };
 
 // oxlint-disable-next-line no-invalid-void-type

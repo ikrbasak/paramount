@@ -13,6 +13,7 @@ const baseLogger = pino({
   level: LOG_LEVEL,
   base: { deployment: LOG_DEPLOYMENT_ID },
   messageKey: 'key',
+  timestamp: () => `,"ts":${Date.now()}`,
   redact: {
     remove: true,
     // NOTE keep this list up to date when adding new sensitive fields.
@@ -26,7 +27,7 @@ export const logger = new TypedLogger(baseLogger, () => logContextStorage.getSto
 export const withLogContext = <T>(fn: () => Bun.MaybePromise<T>): Bun.MaybePromise<T> => {
   const store: LogContextStore = {
     logger: baseLogger.child({ correlationId: UuidUtil.generate() }),
-    wide: { keys: [], data: {} },
+    events: [],
   };
 
   return logContextStorage.run(store, async () => {

@@ -1,21 +1,16 @@
 import type pino from 'pino';
 
 import type {
-  AddRegistry,
   AuditRegistry,
   LogLevel,
   LogRegistry,
   RegistryData,
+  WideEvent,
 } from '@/lib/logger/types';
-
-export type WideEventStore = {
-  keys: string[];
-  data: Record<string, unknown>;
-};
 
 export type LogContextStore = {
   logger: pino.Logger;
-  wide: WideEventStore;
+  events: WideEvent[];
 };
 
 export class TypedLogger {
@@ -51,15 +46,16 @@ export class TypedLogger {
     this.emit(this.resolve(), 'info', key, { ...args[0], audit: true });
   }
 
-  add<K extends keyof AddRegistry>(key: K, ...args: RegistryData<AddRegistry, K>): void {
+  add<K extends keyof LogRegistry>(key: K, ...args: RegistryData<LogRegistry, K>): void {
     const store = this.getStore();
     const data = args[0] ?? undefined;
 
     if (store) {
-      store.wide.keys.push(key);
+      const event: WideEvent = { key, time: Date.now() };
       if (data) {
-        Object.assign(store.wide.data, data);
+        Object.assign(event, data);
       }
+      store.events.push(event);
     } else {
       this.emit(this.baseLogger, 'info', key, data);
     }
@@ -67,15 +63,12 @@ export class TypedLogger {
 
   flush(error?: boolean): void {
     const store = this.getStore();
-    if (!store || store.wide.keys.length === 0) {
+    if (!store || store.events.length === 0) {
       return;
     }
 
     const level: LogLevel = error ? 'error' : 'info';
-    const { keys, data } = store.wide;
-    this.emit(store.logger, level, 'wide:event', { ...data, keys });
-
-    store.wide.keys = [];
-    store.wide.data = {};
+    this.emit(store.logger, level, 'wide:event', { events: store.events });
+    store.events = [];
   }
 }

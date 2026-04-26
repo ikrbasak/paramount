@@ -145,9 +145,11 @@ logger.audit('user:login', { userId, ip });
 logger.add('hono:req:context', { reqId, url, method });
 ```
 
-**Registries** (`src/lib/logger/types.ts`): `LogRegistry` for `.log`, `AddRegistry` for `.add`, `AuditRegistry` for `.audit`. New log keys must be added to the appropriate registry first — wrong key or wrong data shape = compile error.
+**Registries** (`src/lib/logger/types.ts`): `LogRegistry` for `.log` and `.add`. `AuditRegistry` is a superset of `LogRegistry` — all `.log` keys are valid `.audit` keys too. New keys must be added to the registry first — wrong key or wrong data shape = compile error.
 
-**Wide events**: `withLogContext` wraps request/job scope. All `.add()` calls accumulate; at scope exit, flushed as single JSON line (`wide:event` key) with all data + `keys[]` array. Error exit flushes at `error` level.
+**Wide events**: `withLogContext` wraps request/job scope. Each `.add()` call stores a discrete event with its own `key`, data, and `time`. At scope exit, flushed as single JSON line (`wide:event` key) with `events[]` array. Error exit flushes at `error` level.
+
+**Timestamp field**: Pino outputs `ts` (not `time`) via custom timestamp function. Wide event entries also use `time` (ms epoch).
 
 **Keys**: short, colon-namespaced, grep-friendly — not sentences (e.g. `'bull:job:started'`, `'hono:req:failed'`).
 
