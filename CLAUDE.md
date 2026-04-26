@@ -37,6 +37,7 @@ make seeder:run            # run pending seeders
 - **Dependencies**: prefer Bun built-ins (`Bun.serve`, `Bun.password`, etc.) before packages. If package needed, explain in 2–3 sentences and ask confirmation before adding.
 - **CI/CD**: uses GitHub Actions (`.github/workflows/`). Pin `uses` actions to exact commit SHAs with version comments (e.g. `uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`). **Before modifying any workflow**, read `docs/workflows.md` for full context on branch strategy, triggers, labels, and setup requirements. **After modifying workflows**, update `docs/workflows.md` to reflect the changes.
 - **Transactions**: when writing to both DB and cache (Redis), wrap DB ops in MikroORM transaction, apply cache mutations only after DB commit.
+- **TypeScript types**: prefer `type` over `interface` unless declaration merging is needed.
 - **Zod imports**: use `import * as z from 'zod'` — never default import (`import z from 'zod'`).
 - **Environment variables**: never read `.env*` files directly. Refer to `src/validators/schemas/environment.ts` for available env vars and their types.
 - **Bundling**: Bun native bundler — no alternative bundler config or deps.
@@ -130,13 +131,27 @@ Centralized in `src/constants/`:
 
 ### Logging
 
-Structured Pino logging (`messageKey: 'key'` — log messages appear under `key` in JSON output, not `msg`). Log **message** must be short, dot-namespaced, grep-friendly key — not sentence (e.g. `'bull:job:started'`, `'user:login:failed'`). Variable data in preceding object:
+Typed logger built on Pino (`messageKey: 'key'`). Three methods — keys and data shapes enforced via registries in `src/lib/logger/types.ts`:
+
+| Method   | Signature                | When                                                                          |
+| -------- | ------------------------ | ----------------------------------------------------------------------------- |
+| `.log`   | `log(level, key, data?)` | Operational logs, immediate emit                                              |
+| `.audit` | `audit(key, data?)`      | Business/compliance events, always info level with `audit: true`              |
+| `.add`   | `add(key, data?)`        | Wide events — accumulates in ALS context, flushed as single log at scope exit |
 
 ```ts
-logger.info({ userId, duration }, 'user:login:succeeded');
+logger.log('error', 'redis:cache:error', { error });
+logger.audit('user:login', { userId, ip });
+logger.add('hono:req:context', { reqId, url, method });
 ```
 
-Use `withLogContext` to wrap async work for request `correlationId` propagation (route handlers, queue processors). Logger auto-redacts `password`, `secret`, `token` — new sensitive fields need redact list update in `src/lib/logger/index.ts`.
+**Registries** (`src/lib/logger/types.ts`): `LogRegistry` for `.log`, `AddRegistry` for `.add`, `AuditRegistry` for `.audit`. New log keys must be added to the appropriate registry first — wrong key or wrong data shape = compile error.
+
+**Wide events**: `withLogContext` wraps request/job scope. All `.add()` calls accumulate; at scope exit, flushed as single JSON line (`wide:event` key) with all data + `keys[]` array. Error exit flushes at `error` level.
+
+**Keys**: short, colon-namespaced, grep-friendly — not sentences (e.g. `'bull:job:started'`, `'hono:req:failed'`).
+
+Logger auto-redacts `password`, `secret`, `token` — new sensitive fields need redact list update in `src/lib/logger/index.ts`.
 
 ### Path aliases
 
