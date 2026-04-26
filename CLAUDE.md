@@ -131,31 +131,14 @@ Centralized in `src/constants/`:
 
 ### Logging
 
-Typed logger built on Pino (`messageKey: 'key'`). Two methods — keys and data shapes enforced via registries in `src/lib/logger/types.ts`:
+**Before modifying logging**, read `docs/logging.md` for full context on methods, registries, wide events, and key naming conventions. **After modifying logging**, update `docs/logging.md` to reflect the changes.
 
-| Method   | Signature                          | When                                                             |
-| -------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `.log`   | `log(level, key, data?, options?)` | Inside ALS: accumulates into wide event. Outside: immediate emit |
-| `.audit` | `audit(key, data?)`                | Business/compliance events, always info level with `audit: true` |
+Quick reference — two methods, keys enforced via registries in `src/lib/logger/types.ts`:
 
-```ts
-logger.log('error', 'redis:cache:error', { error });
-logger.log('info', 'hono:req:context', { reqId, url, method });
-logger.log('warn', 'bull:job:failed', { error, remaining }, { immediate: true });
-logger.audit('user:login', { userId, ip });
-```
+- **`.log(level, key, data?, options?)`** — inside ALS: accumulates into wide event. Outside: immediate emit. `{ immediate: true }` for both.
+- **`.audit(key, data?)`** — always emits at `info` level with `audit: true`.
 
-**`{ immediate: true }`** — inside ALS, adds to wide event AND emits immediately. Useful for errors that need both wide event context and instant visibility.
-
-**Registries** (`src/lib/logger/types.ts`): `LogRegistry` for `.log`. `AuditRegistry` is a superset of `LogRegistry` — all `.log` keys are valid `.audit` keys too. New keys must be added to the registry first — wrong key or wrong data shape = compile error.
-
-**Wide events**: `withLogContext` wraps request/job scope. Each `.log()` call inside ALS stores a discrete event with `key`, `level`, data, and `time`. At scope exit, flushed as single JSON line (`wide:event` key) with `events[]` array. Error exit flushes at `error` level. Outside ALS, `.log()` emits immediately.
-
-**Timestamp field**: Pino outputs `ts` (not `time`) via custom timestamp function. Wide event entries use `time` (ms epoch).
-
-**Keys**: short, colon-namespaced, grep-friendly — not sentences (e.g. `'bull:job:started'`, `'hono:req:failed'`).
-
-Logger auto-redacts `password`, `secret`, `token` — new sensitive fields need redact list update in `src/lib/logger/index.ts`.
+New log keys must be added to `LogRegistry` (or `AuditRegistry` for audit-only keys) before use — wrong key or data shape = compile error. Keys must be short, colon-namespaced: `'domain:subject:action'`.
 
 ### Path aliases
 
