@@ -8,8 +8,8 @@ import { HealthCheckService } from '@/services/health-check';
 
 const healthRouter = new Hono().get(
   APIRoute.Health,
-  requestValidate('query', z.object({})),
   responseCache('never'),
+  requestValidate('query', z.object({})),
   async (c) => {
     const success = await HealthCheckService.check();
 
