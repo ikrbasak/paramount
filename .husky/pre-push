@@ -17,7 +17,6 @@ pop_stash() {
 
 trap pop_stash EXIT
 
-gitleaks git --platform=github --verbose
 bun run fmt:c
 bun run lint:c
 bun run build

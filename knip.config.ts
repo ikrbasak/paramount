@@ -14,7 +14,6 @@ const config: KnipConfig = () => {
     bun: true,
     typescript: true,
     vitest: true,
-    ignoreBinaries: ['gitleaks'],
   };
 
   return config;
