@@ -187,6 +187,8 @@ it('should return 500 when the database is unavailable during the health check',
 
 Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`. Lowercase subjects. Frequent, focused commits — split by logical unit (separate commits for deps, config, tests, pipeline).
 
+**Commit in discrete steps:** (1) `git add` the appropriate files, (2) `git commit`. If pushing, push as a separate third step. Never combine staging and committing into a single command.
+
 **Commit often, in dependency order.** Each commit must leave the codebase buildable so any commit can be checked out for point-in-time recovery. Commit dependencies before dependents:
 
 ```
